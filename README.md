@@ -1,14 +1,14 @@
 Snicker
 =======
 
-#### Attention
+### Attention
 You're on the **unstable**, possibly **dangerous** and **incomplete** Branch of the Snicker
 Comment-System plugin for the FlatFile Bludit Content Management System. You should NEVER use
 this build on productive / working websites, this build is ONLY for the development and testing!
 
 You have been warned!
 
-#### Missing Features
+### Missing Features
 The following features are currently / still missing.
 
 -   Translations (Strings are currently hardcoded)
