@@ -87,7 +87,7 @@
                 "frontend_template"         => "default",
                 "frontend_order"            => "date_desc",
                 "frontend_per_page"         => 15,
-                "frontend_ajax"             => true,
+                "frontend_ajax"             => false,
                 "subscription"              => true,
                 "subscription_from"         => "ticker@" . $_SERVER["SERVER_NAME"],
                 "subscription_reply"        => "noreply@" . $_SERVER["SERVER_NAME"],
