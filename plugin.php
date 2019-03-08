@@ -613,7 +613,12 @@
             checkRole(array("admin"));
 
             // Set Backend View
-            $this->backendView = "index";
+            $split = str_replace("snicker", "", trim($url->slug(), "/"));
+            if(!empty($split) && $split !== "/"){
+                $this->backendView = "edit";
+            } else {
+                $this->backendView = "index";
+            }
         }
 
         /*
@@ -658,7 +663,7 @@
 
             // Snicker Admin Content
             ob_start();
-            require("admin/index.php");
+            require("admin/{$this->backendView}.php");
             $add = ob_get_contents();
             ob_end_clean();
 
