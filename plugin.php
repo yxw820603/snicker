@@ -580,7 +580,7 @@
          |  COMMENTS :: DELETE COMMENT
          |  @since 0.1.0
          */
-        public function deleteComment($page_key, $uid){
+        public function deleteComment($uid){
             global $comments, $login;
 
             // Check Comment

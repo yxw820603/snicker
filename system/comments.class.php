@@ -402,7 +402,7 @@
             }
 
             // Remove Comment File
-            if(!Filesystem::remfile($file)){
+            if(!Filesystem::rmfile($file)){
                 Log::set(__METHOD__, "error-comment-remove", $file);
                 return false;
             }
