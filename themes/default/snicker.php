@@ -40,9 +40,13 @@
                             </div>
                         </header>
                     <?php } else { ?>
+                        <?php $user = new User($login->username()); ?>
+
                         <header>
+                            <input type="hidden" name="comment[user]" value="<?php echo $user->username(); ?>" />
+                            <input type="hidden" name="comment[token]" value="<?php echo md5($user->tokenAuth()); ?>" />
                             <div class="inner">
-                                Logged in as ?php echo <?php echo $login->username(); ?>
+                                Logged in as <?php echo $user->nickname(); ?>
                             </div>
                         </header>
                     <?php } ?>

@@ -37,7 +37,7 @@
         }
 
         // Render
-        $uri = DOMAIN_ADMIN . "snicker/?action=snicker&snicker=manage&key=%s&uid=%s&type=%s&tokenCSRF=%s";
+        $uri = DOMAIN_ADMIN . "snicker/?action=snicker&snicker=manage&uid=%s&type=%s&tokenCSRF=%s";
         $token = $security->getTokenCSRF();
         ?>
         <table class="table mt-3">
@@ -89,26 +89,26 @@
                                 </button>
                                 <div class="dropdown-menu dropdown-menu-right">
                                     <?php if($type !== "approved"){ ?>
-                                        <a class="dropdown-item" href="<?php printf($uri, $comment->page_key(), $comment->uid(), "approved", $token); ?>">Approve Comment</a>
+                                        <a class="dropdown-item" href="<?php printf($uri, $comment->uid(), "approved", $token); ?>">Approve Comment</a>
                                     <?php } ?>
 
                                     <?php if($type !== "rejected"){ ?>
-                                        <a class="dropdown-item" href="<?php printf($uri, $comment->page_key(), $comment->uid(), "rejected", $token); ?>">Reject Comment</a>
+                                        <a class="dropdown-item" href="<?php printf($uri, $comment->uid(), "rejected", $token); ?>">Reject Comment</a>
                                     <?php } ?>
 
                                     <?php if($type !== "spam"){ ?>
-                                        <a class="dropdown-item" href="<?php printf($uri, $comment->page_key(), $comment->uid(), "spam", $token); ?>">Mark as Spam</a>
+                                        <a class="dropdown-item" href="<?php printf($uri, $comment->uid(), "spam", $token); ?>">Mark as Spam</a>
                                     <?php } ?>
 
                                     <?php if($type !== "pending"){ ?>
                                         <div class="dropdown-divider"></div>
-                                        <a class="dropdown-item" href="<?php printf($uri, $comment->page_key(), $comment->uid(), "pending", $token); ?>">Back to Pending</a>
+                                        <a class="dropdown-item" href="<?php printf($uri, $comment->uid(), "pending", $token); ?>">Back to Pending</a>
                                     <?php } ?>
                                 </div>
                             </div>
 
                             <a href="<?php echo DOMAIN_ADMIN . "snicker/edit/?uid=" . $comment->key(); ?>" class="btn btn-outline-primary btn-sm">Edit</a>
-                            <a href="<?php printf($uri, $comment->page_key(), $comment->uid(), "delete", $token); ?>" class="btn btn-outline-danger btn-sm">Delete</a>
+                            <a href="<?php printf($uri, $comment->uid(), "delete", $token); ?>" class="btn btn-outline-danger btn-sm">Delete</a>
                         </td>
                     </tr>
                 <?php } ?>

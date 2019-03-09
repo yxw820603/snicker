@@ -86,12 +86,7 @@
          |  @since  0.1.0
          */
         private function generateUUID($username = null){
-            global $users, $security;
-
-            // UUID
-            if($users->exists($username)){
-                return "bludit";
-            }
+            global $security;
             return md5($security->getUserIp() . $_SERVER["HTTP_USER_AGENT"]);
         }
 
@@ -239,7 +234,7 @@
             $row = array();
             foreach($this->dbFields AS $field => $value){
                 if(isset($args[$field])){
-                    $final = Sanitize::html($args[$field]);
+                    $final = is_string($args[$field])? Sanitize::html($args[$field]): $args[$field];
                 } else {
                     $final = $value;
                 }
@@ -265,9 +260,8 @@
             $row["dateAudit"] = ($row["status"] !== "pending")? Date::current(DB_DATE_FORMAT): null;
 
             // Set User Data
-            $row["uuid"] = $this->generateUUID($row["username"]);
-            if($row["uuid"] === "bludit"){
-                $row["email"] = null;
+            if($row["uuid"] !== "bludit"){
+                $row["uuid"] = $this->generateUUID($row["username"]);
             }
 
             // Create Comment Directory
@@ -298,26 +292,26 @@
          |  HANDLE :: EDIT AN EXISTING COMMENT
          |  @since  0.1.0
          |
-         |  @param  array   The respective comment array, including the respective "uid".
+         |  @param  string  The unique comment ID as STRING.
+         |  @param  array   The respective comment array.
          |
          |  @return multi   The comment UID on success, FALSE on failure.
          */
-        public function edit($args){
+        public function edit($uid, $args){
             global $pages;
 
             // Check Comment UID
-            if(!isset($args["uid"]) || !$this->exists($args["uid"])){
-                $this->log(__METHOD__, "error-comment-uid", array($args["uid"]));
+            if(!$this->exists($uid)){
+                $this->log(__METHOD__, "error-comment-uid", array($uid));
                 return false;
             }
-            $uid = $args["uid"];
             $data = $this->db[$uid];
 
             // Loop Default Fields
             $row = array();
             foreach($this->dbFields AS $field => $value){
                 if(isset($args[$field])){
-                    $final = Sanitize::html($args[$field]);
+                    $final = is_string($args[$field])? Sanitize::html($args[$field]): $args[$field];
                 } else {
                     $final = $data[$field];
                 }
@@ -346,9 +340,6 @@
             // Set User Data
             if($data["uuid"] !== $row["uuid"]){
                 $row["uuid"] = $this->generateUUID($row["username"]);
-                if($row["uuid"] === "bludit"){
-                    $row["email"] = null;
-                }
             }
 
             // Check Comment File

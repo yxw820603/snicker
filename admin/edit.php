@@ -19,7 +19,7 @@
 ?><h2 class="mt-0 mb-3">
     <span class="oi oi-comment-square" style="font-size: 0.7em;"></span> Snicker Comments / Edit
 </h2>
-<form method="post" action="<?php echo HTML_PATH_ADMIN_ROOT; ?>snicker/edit">
+<form method="post" action="<?php echo HTML_PATH_ADMIN_ROOT; ?>snicker">
     <div class="card" style="margin: 1.5rem 0;">
         <div class="card-body">
             <div class="row">
@@ -27,11 +27,13 @@
                     <input type="hidden" id="tokenUser" name="tokenUser" value="<?php echo $login->username(); ?>" />
                     <input type="hidden" id="tokenCSRF" name="tokenCSRF" value="<?php echo $security->getTokenCSRF(); ?>" />
                     <input type="hidden" id="sn-action" name="action" value="snicker" />
-                    <button class="btn btn-primary" name="snicker" value="config">Update Comment</button>
+                    <input type="hidden" id="sn-snicker" name="snicker" value="manage" />
+                    <input type="hidden" id="sn-unique" name="uid" value="<?php echo $comment->uid(); ?>" />
+                    <button class="btn btn-primary" name="type" value="edit">Update Comment</button>
                 </div>
 
                 <div class="col-sm-6 text-right">
-                    <button class="btn btn-danger" name="snicker" value="config">Delete Comment</button>
+                    <button class="btn btn-danger" name="type" value="delete">Delete Comment</button>
                 </div>
             </div>
         </div>
@@ -53,24 +55,30 @@
             <div class="card">
                 <div class="card-header">Meta Settings</div>
                 <div class="card-body">
-                    <p>
-                        <input type="text" name="comment[username]" value="<?php echo $comment->username(); ?>"
-                            class="form-control" placeholder="Comment Username" />
-                    </p>
-                    <p>
-                        <input type="text" name="comment[email]" value="<?php echo $comment->email(); ?>"
+
+                    <?php if($comment->getValue("uuid") === "bludit"){ ?>
+                        <p>
+                            <input type="text" value="<?php echo $comment->username(); ?>" class="form-control" disabled />
+                        </p>
+                        <p>
+                            <input type="text" value="Registered User" class="form-control" disabled />
+                        </p>
+                    <?php } else { ?>
+                        <p>
+                            <input type="text" name="comment[username]" value="<?php echo $comment->username(); ?>"
+                            class="form-control" placeholder="Comment USername" />
+                        </p>
+                        <p>
+                            <input type="text" name="comment[email]" value="<?php echo $comment->email(); ?>"
                             class="form-control" placeholder="Comment eMail" />
-                    </p>
-                    <p>
-                        <input type="text" name="comment[website]" value="<?php echo $comment->website(); ?>"
-                            class="form-control" placeholder="Comment Website" />
-                    </p>
+                        </p>
+                    <?php } ?>
                     <p>
                         <select name="comment[type]" class="custom-select">
-                            <option value="pending"<?php echo ($comment->type() == "pending")? ' selected="selected"': ''; ?>>Pending</option>
-                            <option value="approved"<?php echo ($comment->type() == "approved")? ' selected="selected"': ''; ?>>Approved</option>
-                            <option value="rejected"<?php echo ($comment->type() == "rejected")? ' selected="selected"': ''; ?>>Rejected</option>
-                            <option value="spam"<?php echo ($comment->type() == "spam")? ' selected="selected"': ''; ?>>Spam</option>
+                            <option value="pending"<?php echo ($comment->isPending())? ' selected="selected"': ''; ?>>Pending</option>
+                            <option value="approved"<?php echo ($comment->isApproved())? ' selected="selected"': ''; ?>>Approved</option>
+                            <option value="rejected"<?php echo ($comment->isRejected())? ' selected="selected"': ''; ?>>Rejected</option>
+                            <option value="spam"<?php echo ($comment->isSpam())? ' selected="selected"': ''; ?>>Spam</option>
                         </select>
                     </p>
                 </div>

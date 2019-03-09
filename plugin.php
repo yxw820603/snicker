@@ -202,18 +202,18 @@
 
             // Like Comment
             if($type === "like"){
-                if(!$this->getValue("comment_enable_like")){
+                if(!$this->getValue("comment_enable_like") || !isset($data["uid"])){
                     return false;
                 }
-                return true;
+                return $this->rateComment($data["uid"], "like");
             }
 
             // Dislike Comment
             if($type === "dislike"){
-                if(!$this->getValue("comment_enable_dislike")){
+                if(!$this->getValue("comment_enable_dislike") || !isset($data["uid"])){
                     return false;
                 }
-                return true;
+                return $this->rateComment($data["uid"], "dislike");
             }
 
             // Unknown Action
@@ -228,7 +228,7 @@
             global $login, $pages, $comments;
 
             // Validate
-            if(!isset($data["key"]) || !isset($data["uid"]) || !isset($data["type"])){
+            if(!isset($data["uid"]) || !isset($data["type"])){
                 return false;
             }
 
@@ -243,6 +243,14 @@
             // Delete Comment
             if($data["type"] === "delete"){
                 if(!$this->deleteComment($data["uid"])){
+                    return false;
+                }
+                return true;
+            }
+
+            // Edit Comment
+            if($data["type"] === "edit"){
+                if(!$this->editComment($data["uid"], $data["comment"])){
                     return false;
                 }
                 return true;
@@ -331,6 +339,7 @@
             return Redirect::url(HTML_PATH_ADMIN_ROOT . "snicker#config");
         }
 
+
 ##
 ##  THEMES
 ##
@@ -409,6 +418,7 @@
             return $content;
         }
 
+
 ##
 ##  COMMENTS
 ##
@@ -417,14 +427,12 @@
          |  @since 0.1.0
          */
         public function writeComment($comment){
-            global $comments, $pages;
+            global $comments, $pages, $users;
 
-            // Check Data
+            // Check Basics
             if(!isset($comment["page_key"]) || !$pages->exists($comment["page_key"])){
                 return false;
             }
-
-            // Check ParentID
             if(isset($comment["parent_id"])){
                 if(!$comments->exists($comment["parent_id"])){
                     return false;
@@ -446,26 +454,36 @@
             $comment["comment"] = Sanitize::html($comment["comment"]);
 
             // Sanitize User
-            $login = new Login();
-            if($login->isLogged()){
-                $comment["status"] = "approved";
-                $comment["username"] = $login->username();
-                $comment["email"] = null;
-            } else {
-                if(!isset($comment["username"]) || !isset($comment["email"])){
+            if(isset($comment["user"]) && isset($comment["token"])){
+                if(!$users->exists($comment["user"])){
                     return false;
                 }
+                $user = new User($comment["user"]);
+
+                if(md5($user->tokenAuth()) === $comment["token"]){
+                    return false;
+                }
+                unset($comment["user"], $comment["token"]);
+
+                $comment["uuid"] = "bludit";
+                $comment["status"] = "approved";
+                $comment["username"] = $user->username();
+                $comment["email"] = null;
+            } else if(isset($comment["username"]) && isset($comment["email"])){
                 if(!Valid::email($comment["email"])){
                     return false;
                 }
+                $comment["uuid"] = null;
+                $comment["status"] = "pending";
                 $comment["username"] = Sanitize::html(strip_tags($comment["username"]));
                 $comment["email"] = Sanitize::email($comment["email"]);
+            } else {
+                return false;
             }
 
             // Sanitize Data
             $comment["like"] = 0;
             $comment["dislike"] = 0;
-            $comment["website"] = isset($comment["website"])? Sanitize::url($comment["website"]): "";
             $comment["subscribe"] = isset($comment["subscribe"]);
 
             // Check
@@ -479,23 +497,14 @@
          |  COMMENTS :: EDIT COMMENT
          |  @since 0.1.0
          */
-        public function editComment($comment){
+        public function editComment($uid, $comment){
             global $comments, $pages;
 
-            // Check UID
-            if(!isset($comment["uid"]))
-
-            // Check Page Key
-            if(!isset($comment["page_key"]) || !$pages->exists($comment["page_key"])){
+            // Check Basics
+            if(!$comments->exists($uid)){
                 return false;
             }
-
-            // Check ParentID
-            if(isset($comment["parent_id"])){
-                if(!$comments->exists("{$comment["page_key"]}/comment_{$comment["parent_id"]}")){
-                    return false;
-                }
-            }
+            $data = new Comment($uid);
 
             // Sanitize Title
             if($this->getValue("comment_title") === "required"){
@@ -512,15 +521,36 @@
             $comment["comment"] = Sanitize::html($comment["comment"]);
 
             // Sanitize User
-            $login = new Login();
-            if($login->isLogged()){
-                if($login->role() !== "admin" && $login->email() !== $comment["email"]){
+            if(isset($comment["user"]) && isset($comment["token"])){
+                if(!$users->exists($comment["user"])){
                     return false;
                 }
+                $user = new User($comment["user"]);
+
+                if(md5($user->tokenAuth()) === $comment["token"]){
+                    return false;
+                }
+                unset($comment["user"], $comment["token"]);
+
+                $comment["uuid"] = "bludit";
+                $comment["status"] = "approved";
+                $comment["username"] = $user->username();
+                $comment["email"] = null;
+            } else if(isset($comment["username"]) && isset($comment["email"])){
+                if(!Valid::email($comment["email"])){
+                    return false;
+                }
+                $comment["uuid"] = null;
+                $comment["status"] = "pending";
+                $comment["username"] = Sanitize::html(strip_tags($comment["username"]));
+                $comment["email"] = Sanitize::email($comment["email"]);
             }
 
-
-
+            // Check
+            if(!$comments->edit($uid, $comment)){
+                return false;
+            }
+            return true;
         }
 
         /*
@@ -552,27 +582,49 @@
                 return true;
             }
 
-            $comment["uid"] = $uid;
             $comment["status"] = $type;
-            if(!$comments->edit($comment)){
+            if(!$comments->edit($uid, $comment)){
                 return false;
             }
             return true;
         }
 
         /*
-         |  COMMENTS :: LIKE COMMENT
+         |  COMMENTS :: RATE COMMENT
          |  @since 0.1.0
          */
-        public function likeComment($page_key, $uid){
+        public function rateComment($uid, $type = "like"){
+            global $login;
 
-        }
+            // Check Comment
+            if(!$comments->exists($uid)){
+                return false;
+            }
+            $comment = new Comment($uid);
 
-        /*
-         |  COMMENTS :: DISLIKE COMMENT
-         |  @since 0.1.0
-         */
-        public function dislikeComment($page_key, $uid){
+            // Check Session
+            if(!Session::started()){
+                Session::start();
+            }
+
+            // Has already rated?
+            if(($rate = Session::get("snicker-ratings")) !== false){
+                if(in_array($uid, explode(",", $rate))){
+                    return false;
+                }
+            }
+
+            // Handle
+            $rating = $comment->rating();
+            $reating[($type === "like"? 0: 1)]++;
+            if(!$comments->edit($uid, $rating)){
+                return false;
+            }
+
+            // Update and Return
+            $rate = ($rate === false)? $uid: $rate . "," . $uid;
+            Session::set("snicker-ratings", $rate);
+            return true;
 
         }
 
@@ -587,12 +639,13 @@
             if(!$comments->exists($uid)){
                 return false;
             }
+            $comment = new Comment($uid);
 
             // Check Rights
             if(!isset($login) || !is_a($login, "Login")){
                 $login = new Login();
             }
-            if($login->role() !== "admin"){
+            if($login->role() !== "admin" && $login->username() !== $comment->getValue("username")){
                 return false;
             }
 
