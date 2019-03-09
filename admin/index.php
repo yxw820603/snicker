@@ -106,7 +106,8 @@
                                     <?php } ?>
                                 </div>
                             </div>
-                            <a href="" class="btn btn-outline-primary btn-sm">Edit</a>
+
+                            <a href="<?php echo DOMAIN_ADMIN . "snicker/edit/?uid=" . $comment->key(); ?>" class="btn btn-outline-primary btn-sm">Edit</a>
                             <a href="<?php printf($uri, $comment->page_key(), $comment->uid(), "delete", $token); ?>" class="btn btn-outline-danger btn-sm">Delete</a>
                         </td>
                     </tr>
@@ -475,7 +476,7 @@
 
             <div class="card mt-5 mb-4">
                 <div class="card-body">
-                    <button class="btn btn-primary" name="action" value="save">Save Settings</button>
+                    <button class="btn btn-primary" name="snicker" value="config">Save Settings</button>
                 </div>
             </div>
         </form>

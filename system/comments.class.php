@@ -14,23 +14,25 @@
     class Comments extends dbJSON{
         /*
          |  DATABASE FIELDS
-         |      `key`       /page_key/comment_uniqueID
          */
         protected $dbFields = array(
-            "title"         => "",              // Comment Title
-            "type"          => "pending",       // Comment Status: pending, approved, rejected, spam
-            "like"          => 0,               // Comment Like Counter
-            "dislike"       => 0,               // Comment Dislike Counter
-            "username"      => "",              // Author Username
-            "email"         => "",              // Author eMail Address
-            "website"       => "",              // Author Website
-            "uid"           => "",              // Unique Comment ID
-            "page_key"      => "",              // Page Key (Page Path)
-            "parent_id"     => "",              // Parent Comment ID
-            "subscribe"     => false,           // Subscribed Comment
-            "date"          => "",              // Date Creation
-            "dateModified"  => "",              // Date Modified
-            "custom"        => array()          // Meta Data
+            "type"          => "comment",   // Comment Type ("comment", "reply", "pingback")
+            "depth"         => 1,           // Comment Depth (starting with 1)
+            "title"         => "",          // Comment Title
+            "status"        => "pending",   // Comment Status ("pending", "approved", "rejected", "spam")
+            "rating"        => [0, 0],      // Comment Rating
+            "page_key"      => "",          // Comment Page Key
+            "parent_uid"    => "",          // Comment Parent UID
+
+            "uuid"          => "",          // Unique User ID or "bludit"
+            "username"      => "",          // Username
+            "email"         => "",          // eMail Address (or null if "bludit")
+            "subscribe"     => false,       // eMail Subscription
+
+            "date"          => "",          // Date Comment Written
+            "dateModified"  => "",          // Date Comment Modified
+            "dateAudit"     => "",          // Date Comment Audit
+            "custom"        => array(),     // Custom Data
         );
 
         /*
@@ -46,10 +48,31 @@
         }
 
         /*
-         |  HELPER :: GENERATE UNIQUE ID
+         |  HELPER :: FILL LOG FILE
          |  @since  0.1.0
          */
-        private function uniqueID(){
+        private function log($method, $string, $args){
+            $strings = array(
+                "error-comment-uid"     => "The comment UID is invalid or does not exist [%s]",
+                "error-page-key"        => "The page key is invalid or does not exist [%s]",
+                "error-create-dir"      => "The comment directory could not be created [%s]",
+                "error-create-file"     => "The comment file could not be created [%s]",
+                "error-comment-file"    => "The comment file does not exist [%s]",
+                "error-comment-update"  => "The comment file could not be updated [%s]",
+                "error-comment-remove"  => "The comment file could not be deleted [%s]",
+                "error-update-db"       => "The comment database could not be updated"
+            );
+            if(array_key_exists($string, $strings)){
+                $string = $strings[$string];
+            }
+            Log::set($method . LOG_SEP . vsprintf("Error occured: {$string}", $args), LOG_TYPE_ERROR);
+        }
+
+        /*
+         |  HELPER :: GENERATE UNIQUE COMMENT ID
+         |  @since  0.1.0
+         */
+        private function generateUID(){
             if(function_exists("random_bytes")){
                 return bin2hex(random_bytes(16));
             } else if(function_exists("openssl_random_pseudo_bytes")){
@@ -62,13 +85,19 @@
          |  HELPER :: GENERATE UNIQUE USER ID
          |  @since  0.1.0
          */
-        private function uniqueUserID($userdata){
-            return password_hash();
+        private function generateUUID($username = null){
+            global $users, $security;
+
+            // UUID
+            if($users->exists($username)){
+                return "bludit";
+            }
+            return md5($security->getUserIp() . $_SERVER["HTTP_USER_AGENT"]);
         }
 
 
         /*
-         |  HELPER :: GET DEFAULT FIELDS
+         |  PUBLIC :: GET DEFAULT FIELDS
          |  @since  0.1.0
          */
         public function getDefaultFields(){
@@ -77,7 +106,7 @@
 
 
         /*
-         |  GET DATABASE
+         |  DATA :: GET DATABASE
          |  @since  0.1.0
          */
         public function getDB($keys = true){
@@ -88,13 +117,13 @@
         }
 
         /*
-         |  GET PENDING DATABASE
+         |  DATA :: GET PENDING DATABASE
          |  @since  0.1.0
          */
         public function getPendingDB($keys = true){
             $temp = $this->db;
             foreach($temp AS $key => $fields){
-                if($fields["type"] !== "pending"){
+                if($fields["status"] !== "pending"){
                     unset($temp[$key]);
                 }
             }
@@ -105,13 +134,13 @@
         }
 
         /*
-         |  GET PUBLIC DATABASE
+         |  DATA :: GET PUBLIC DATABASE
          |  @since  0.1.0
          */
         public function getPublicDB($keys = true){
             $temp = $this->db;
             foreach($temp AS $key => $fields){
-                if($fields["type"] !== "approved"){
+                if($fields["status"] !== "approved"){
                     unset($temp[$key]);
                 }
             }
@@ -122,13 +151,13 @@
         }
 
         /*
-         |  GET REJECTED DATABASE
+         |  DATA :: GET REJECTED DATABASE
          |  @since  0.1.0
          */
         public function getRejectedDB($keys = true){
             $temp = $this->db;
             foreach($temp AS $key => $fields){
-                if($fields["type"] !== "rejected"){
+                if($fields["status"] !== "rejected"){
                     unset($temp[$key]);
                 }
             }
@@ -139,13 +168,13 @@
         }
 
         /*
-         |  GET SPAM DATABASE
+         |  DATA :: GET SPAM DATABASE
          |  @since  0.1.0
          */
         public function getSpamDB($keys = true){
             $temp = $this->db;
             foreach($temp AS $key => $fields){
-                if($fields["type"] !== "spam"){
+                if($fields["status"] !== "spam"){
                     unset($temp[$key]);
                 }
             }
@@ -156,16 +185,16 @@
         }
 
         /*
-         |  GET COMMENTS BY PAGE
+         |  DATA :: GET COMMENTS BY PAGE
          |  @since  0.1.0
          */
         public function getPageCommentsDB($page_key, $keys = true){
             $temp = $this->db;
             foreach($temp AS $key => $fields){
-                if(strpos($key, $page_key . "/comment_") !== 0){
+                if($fields["page_key"] !== $page_key){
                     unset($temp[$key]);
                 }
-                if($fields["type"] !== "approved"){
+                if($fields["status"] !== "approved"){
                     unset($temp[$key]);
                 }
             }
@@ -176,32 +205,35 @@
         }
 
         /*
-         |  GET COMMENT ITEM
+         |  DATA :: GET COMMENT ITEM
          |  @since  0.1.0
          */
-        public function getCommentDB($key){
-            if($this->exists($key)){
-                return $this->db[$key];
+        public function getCommentDB($uid){
+            if($this->exists($uid)){
+                return $this->db[$uid];
             }
             return false;
         }
 
         /*
-         |  CHECK IF COMMENT ITEM EXISTS
+         |  DATA :: CHECK IF COMMENT ITEM EXISTS
          |  @since  0.1.0
          */
-        public function exists($key){
-            return isset($this->db[$key]);
+        public function exists($uid){
+            return isset($this->db[$uid]);
         }
 
+
         /*
-         |  ADD A NEW COMMENT
+         |  HANDLE :: ADD A NEW COMMENT
          |  @since  0.1.0
+         |
+         |  @param  array   The respective comment array.
+         |
+         |  @return multi   The comment UID on success, FALSE on failure.
          */
         public function add($args){
-            global $pages, $snicker;
-            $login = new Login();
-            $admin = ($login->isLogged() && $login->role() === "admin");
+            global $pages;
 
             // Loop Default Fields
             $row = array();
@@ -215,58 +247,71 @@
                 $row[$field] = $final;
             }
 
-            // Set Data
-            $row["uid"] = $this->uniqueID();
-            $row["date"] = Date::current(DB_DATE_FORMAT);
-            if($snicker->getValue("moderation") == "each"){
-                $row["type"] = ($admin)? "approved": "pending";
-            } else {
-                $row["type"] = "approved";
-            }
-
-            // Generate Key
+            // Check Page Key
             if(!isset($row["page_key"]) || !$pages->exists($row["page_key"])){
-                //@todo Error
+                $this->log(__METHOD__, "error-page-key", array($row["page_key"]));
                 return false;
             }
-            $key = $row["page_key"] . "/comment_" . $row["uid"];
+            $uid = $this->generateUID();
+
+            // Check Parent UID
+            if(!isset($row["parent_uid"]) || !$this->exists($row["parent_uid"])){
+                $row["parent_uid"] = null;
+            }
+
+            // Set Comment Data
+            $row["date"] = Date::current(DB_DATE_FORMAT);
+            $row["dateModified"] = null;
+            $row["dateAudit"] = ($row["status"] !== "pending")? Date::current(DB_DATE_FORMAT): null;
+
+            // Set User Data
+            $row["uuid"] = $this->generateUUID($row["username"]);
+            if($row["uuid"] === "bludit"){
+                $row["email"] = null;
+            }
 
             // Create Comment Directory
-            $dir = PATH_PAGES . $row["page_key"] . DS . "comments";
-            if(!file_exists($dir) && Filesystem::mkdir($dir, true) === false){
-                Log::set(__METHOD__.LOG_SEP.'Error occurred when trying to create the directory ['.$dir.']', LOG_TYPE_ERROR);
+            $path = PATH_PAGES . $row["page_key"] . DS . "comments";
+            if(!file_exists($path) && Filesystem::mkdir($path, true) === false){
+                $this->log(__METHOD__, "error-create-dir", array($path));
                 return false;
             }
 
             // Create Comment File
-            $comment = (empty($args["comment"])? "": $args["comment"]);
-            if(file_put_contents($dir . DS . "comment_{$row["uid"]}.php", $comment) === false){
-                Log::set(__METHOD__.LOG_SEP.'Error occurred when trying to create the content in the file [comment_'.$row["uid"].'.php]',LOG_TYPE_ERROR);
+            $file = $path . DS . "c_" . $uid . ".php";
+            if(file_put_contents($file, $args["comment"]) === false){
+                $this->log(__METHOD__, "error-create-file", array($file));
                 return false;
             }
 
             // Insert and Return
-            $this->db[$key] = $row;
+            $this->db[$uid] = $row;
             $this->sortBy();
-            $this->save();
-            return $key;
+            if($this->save() === true){
+                Log::set(__METHOD__, "error-update-db");
+                return false;
+            }
+            return $uid;
         }
 
         /*
-         |  EDIT EXISTING COMMENT
+         |  HANDLE :: EDIT AN EXISTING COMMENT
          |  @since  0.1.0
+         |
+         |  @param  array   The respective comment array, including the respective "uid".
+         |
+         |  @return multi   The comment UID on success, FALSE on failure.
          */
         public function edit($args){
-            global $pages, $Snicker;
-            $login = new Login();
-            $admin = ($login->isLogged() && $login->role() === "admin");
+            global $pages;
 
-            // Check Key
-            $key = $args["key"];
-            if(!isset($this->db[$key])){
-                //@todo Error
+            // Check Comment UID
+            if(!isset($args["uid"]) || !$this->exists($args["uid"])){
+                $this->log(__METHOD__, "error-comment-uid", array($args["uid"]));
                 return false;
             }
+            $uid = $args["uid"];
+            $data = $this->db[$uid];
 
             // Loop Default Fields
             $row = array();
@@ -274,69 +319,105 @@
                 if(isset($args[$field])){
                     $final = Sanitize::html($args[$field]);
                 } else {
-                    $final = $this->db[$key][$field];
+                    $final = $data[$field];
                 }
                 settype($final, gettype($value));
                 $row[$field] = $final;
             }
 
-            // Set Data
+            // Check Page Key
+            if($data["page_key"] !== $row["page_key"]){
+                if(!isset($row["page_key"]) || !$pages->exists($row["page_key"])){
+                    $this->log(__METHOD__, "error-page-key", array($row["page_key"]));
+                    return false;
+                }
+            }
+
+            // Check Parent UID
+            if(!isset($row["parent_uid"]) || !$this->exists($row["parent_uid"])){
+                $row["parent_uid"] = $data["parent_uid"];
+            }
+
+            // Set Comment Data
+            $row["date"] = $data["date"];   // Cannot be changed
             $row["dateModified"] = Date::current(DB_DATE_FORMAT);
-            if(!$admin && $this->db[$key]["type"] !== $row["type"]){
-                $row["type"] = $this->db[$key]["type"];
+            $row["dateAudit"] = ($row["status"] !== "pending")? Date::current(DB_DATE_FORMAT): null;
+
+            // Set User Data
+            if($data["uuid"] !== $row["uuid"]){
+                $row["uuid"] = $this->generateUUID($row["username"]);
+                if($row["uuid"] === "bludit"){
+                    $row["email"] = null;
+                }
             }
 
             // Check Comment File
-            $dir = PATH_PAGES . $row["page_key"] . DS . "comments";
-            if(!file_exists($dir . DS . "comment_{$row["uid"]}.php")){
-                //@todo Error
+            $path = PATH_PAGES . $row["page_key"] . DS . "comments" . DS;
+            $file = $path . "c_" . $uid . ".php";
+            if(!file_exists($path) || !file_exists($file)){
+                Log::set(__METHOD__, "error-comment-file", $file);
                 return false;
             }
 
             // Update Comment File
             if(isset($args["comment"]) && !empty($args["comment"])){
-                if(file_put_contents($dir . DS . "comment_{$row["uid"]}.php", $args["comment"]) === false){
-                    //@todo Error
+                if(file_put_contents($file, $args["comment"]) === false){
+                    Log::set(__METHOD__, "error-comment-update", $file);
                     return false;
                 }
             }
 
             // Insert and Return
-    		unset($this->db[$key]);
-            $this->db[$key] = $row;
+    		unset($this->db[$uid]);
+            $this->db[$uid] = $row;
             $this->sortBy();
-            $this->save();
-            return $key;
+
+            if($this->save() === true){
+                Log::set(__METHOD__, "error-update-db");
+                return false;
+            }
+            return $uid;
         }
 
         /*
-         |  DELETE EXISTING COMMENT
+         |  HANDLE :: DELETE AN EXISTING COMMENT
          |  @since  0.1.0
+         |
+         |  @param  array   The respective comment UID to delete.
+         |
+         |  @return bool    TRUE on success, FALSE on failure.
          */
-        public function delete($key){
-            global $Snicker;
-
-            // Check Key
-            if(!isset($this->db[$key])){
-                //@todo Error
+        public function delete($uid){
+            if(!isset($this->db[$uid])){
                 return false;
             }
-            $row = $this->db[$key];
+            $row = $this->db[$uid];
+
+            // Check Comment File
+            $path = PATH_PAGES . $row["page_key"] . DS . "comments" . DS;
+            $file = $path . "c_" . $uid . ".php";
+            if(!file_exists($path) || !file_exists($file)){
+                Log::set(__METHOD__, "error-comment-file", $file);
+                return false;
+            }
 
             // Remove Comment File
-            $file = PATH_PAGES . $row["page_key"] . DS . "comments/comment_" . $row["uid"] . ".php";
-            if(!file_exists($file) || (file_exists($file) && !Filesystem::rmfile($file))){
+            if(!Filesystem::remfile($file)){
+                Log::set(__METHOD__, "error-comment-remove", $file);
                 return false;
             }
 
             // Remove Database Item
-            unset($this->db[$key]);
-            $this->save();
+            unset($this->db[$uid]);
+            if($this->save() === true){
+                Log::set(__METHOD__, "error-update-db");
+                return false;
+            }
             return true;
         }
 
         /*
-         |  SORT BY
+         |  HANDLE :: SORT COMMENTS
          |  @since  0.1.0
          */
         public function sortBy(){

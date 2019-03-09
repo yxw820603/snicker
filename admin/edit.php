@@ -13,6 +13,9 @@
 
     global $login, $security;
 
+    $comment = new Comment($_GET["uid"]);
+    $page = new Page($comment->page_key());
+
 ?><h2 class="mt-0 mb-3">
     <span class="oi oi-comment-square" style="font-size: 0.7em;"></span> Snicker Comments / Edit
 </h2>
@@ -36,40 +39,45 @@
 
     <div class="row mb-4">
         <div class="col">
-            <input type="text" name="comment[title]" class="form-control form-control-lg" placeholder="Comment Title" />
+            <input type="text" name="comment[title]" value="<?php echo $comment->title(); ?>"
+                class="form-control form-control-lg" placeholder="Comment Title" />
         </div>
     </div>
 
     <div class="row">
         <div class="col-sm-8">
-            <textarea name="comment[comment]" class="form-control" placeholder="Comment Text" style="min-height: 275px;"></textarea>
+            <textarea name="comment[comment]" class="form-control" placeholder="Comment Text"
+                style="min-height: 275px;"><?php echo $comment->commentRaw(); ?></textarea>
         </div>
         <div class="col-sm-4">
             <div class="card">
                 <div class="card-header">Meta Settings</div>
                 <div class="card-body">
                     <p>
-                        <input type="text" name="comment[username]" class="form-control" placeholder="Comment Username" />
+                        <input type="text" name="comment[username]" value="<?php echo $comment->username(); ?>"
+                            class="form-control" placeholder="Comment Username" />
                     </p>
                     <p>
-                        <input type="text" name="comment[email]" class="form-control" placeholder="Comment eMail" />
+                        <input type="text" name="comment[email]" value="<?php echo $comment->email(); ?>"
+                            class="form-control" placeholder="Comment eMail" />
                     </p>
                     <p>
-                        <input type="text" name="comment[website]" class="form-control" placeholder="Comment Website" />
+                        <input type="text" name="comment[website]" value="<?php echo $comment->website(); ?>"
+                            class="form-control" placeholder="Comment Website" />
                     </p>
                     <p>
                         <select name="comment[type]" class="custom-select">
-                            <option value="rejected">Rejected</option>
-                            <option value="approved">Approved</option>
-                            <option value="pending">Pending</option>
-                            <option value="spam">Spam</option>
+                            <option value="pending"<?php echo ($comment->type() == "pending")? ' selected="selected"': ''; ?>>Pending</option>
+                            <option value="approved"<?php echo ($comment->type() == "approved")? ' selected="selected"': ''; ?>>Approved</option>
+                            <option value="rejected"<?php echo ($comment->type() == "rejected")? ' selected="selected"': ''; ?>>Rejected</option>
+                            <option value="spam"<?php echo ($comment->type() == "spam")? ' selected="selected"': ''; ?>>Spam</option>
                         </select>
                     </p>
                 </div>
             </div>
 
             <p class="mt-4 text-center">
-                <a href="" target="_blank" class="btn btn-primary">View Page</a>
+                <a href="<?php echo $page->permalink(); ?>" target="_blank" class="btn btn-primary">View Page</a>
             </p>
         </div>
     </div>

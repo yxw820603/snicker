@@ -242,14 +242,14 @@
 
             // Delete Comment
             if($data["type"] === "delete"){
-                if(!$this->deleteComment($data["key"], $data["uid"])){
+                if(!$this->deleteComment($data["uid"])){
                     return false;
                 }
                 return true;
             }
 
             // Change Type
-            if(!$this->changeCommentType($data["key"], $data["uid"], $data["type"])){
+            if(!$this->changeCommentType($data["uid"], $data["type"])){
                 return false;
             }
             return true;
@@ -298,6 +298,9 @@
             }
             if($config["comment_limit"] < 0 || !is_numeric($config["comment_limit"])){
                 $config["comment_limit"] = 0;
+            }
+            if($config["frontend_per_page"] < 0 || !is_numeric($config["frontend_per_page"])){
+                $config["frontend_per_page"] = 0;
             }
 
             // Validate Filter
@@ -423,7 +426,7 @@
 
             // Check ParentID
             if(isset($comment["parent_id"])){
-                if(!$comments->exists("{$comment["page_key"]}/comment_{$comment["parent_id"]}")){
+                if(!$comments->exists($comment["parent_id"])){
                     return false;
                 }
             }
@@ -445,8 +448,9 @@
             // Sanitize User
             $login = new Login();
             if($login->isLogged()){
+                $comment["status"] = "approved";
                 $comment["username"] = $login->username();
-                $comment["email"] = "*";
+                $comment["email"] = null;
             } else {
                 if(!isset($comment["username"]) || !isset($comment["email"])){
                     return false;
@@ -472,19 +476,64 @@
         }
 
         /*
-         |  COMMENTS :: CHANGE COMMENT TYPE
+         |  COMMENTS :: EDIT COMMENT
          |  @since 0.1.0
          */
-        public function changeCommentType($page_key, $uid, $type){
-            global $comments, $login;
+        public function editComment($comment){
+            global $comments, $pages;
 
-            // Check Comment
-            $key = "{$page_key}/comment_{$uid}";
-            if(!$comments->exists($key)){
+            // Check UID
+            if(!isset($comment["uid"]))
+
+            // Check Page Key
+            if(!isset($comment["page_key"]) || !$pages->exists($comment["page_key"])){
                 return false;
             }
 
-            // Check Type
+            // Check ParentID
+            if(isset($comment["parent_id"])){
+                if(!$comments->exists("{$comment["page_key"]}/comment_{$comment["parent_id"]}")){
+                    return false;
+                }
+            }
+
+            // Sanitize Title
+            if($this->getValue("comment_title") === "required"){
+                if(!isset($comment["title"]) || empty($comment["title"])){
+                    return false;
+                }
+            }
+            $comment["title"] = isset($comment["title"])? Sanitize::html($comment["title"]): "";
+
+            // Sanitize Comment
+            if(!isset($comment["comment"]) || empty($comment["comment"])){
+                return false;
+            }
+            $comment["comment"] = Sanitize::html($comment["comment"]);
+
+            // Sanitize User
+            $login = new Login();
+            if($login->isLogged()){
+                if($login->role() !== "admin" && $login->email() !== $comment["email"]){
+                    return false;
+                }
+            }
+
+
+
+        }
+
+        /*
+         |  COMMENTS :: CHANGE COMMENT TYPE
+         |  @since 0.1.0
+         */
+        public function changeCommentType($uid, $type){
+            global $comments, $login;
+
+            // Check Parameters
+            if(!$comments->exists($uid)){
+                return false;
+            }
             if(!in_array($type, array("pending", "rejected", "approved", "spam"))){
                 return false;
             }
@@ -498,13 +547,13 @@
             }
 
             // Change Comment
-            $comment = $comments->getCommentDB($page_key);
-            if($comment["type"] === $type){
+            $comment = $comments->getCommentDB($uid);
+            if($comment["status"] === $type){
                 return true;
             }
 
-            $comment["key"] = $key;
-            $comment["type"] = $type;
+            $comment["uid"] = $uid;
+            $comment["status"] = $type;
             if(!$comments->edit($comment)){
                 return false;
             }
@@ -535,8 +584,7 @@
             global $comments, $login;
 
             // Check Comment
-            $key = "{$page_key}/comment_{$uid}";
-            if(!$comments->exists($key)){
+            if(!$comments->exists($uid)){
                 return false;
             }
 
@@ -549,7 +597,7 @@
             }
 
             // Delete Comment
-            if(!$comments->delete($key)){
+            if(!$comments->delete($uid)){
                 return false;
             }
             return true;
@@ -614,7 +662,7 @@
 
             // Set Backend View
             $split = str_replace("snicker", "", trim($url->slug(), "/"));
-            if(!empty($split) && $split !== "/"){
+            if(!empty($split) && $split !== "/" && isset($_GET["uid"])){
                 $this->backendView = "edit";
             } else {
                 $this->backendView = "index";

@@ -16,18 +16,18 @@
          |  CONSTRUCTOR
          |  @since  0.1.0
          */
-        public function __construct($key){
+        public function __construct($uid){
             global $comments;
 
             // Get Item
-            $this->vars["key"] = $key;
-            if($key === false){
+            $this->vars["uid"] = $uid;
+            if($uid === false){
                 $row = $comments->getDefaultFields();
             } else {
-                if(Text::isEmpty($key) || !$comments->exists($key)){
+                if(Text::isEmpty($uid) || !$comments->exists($uid)){
                     // @todo Throw Error
                 }
-                $row = $comments->getCommentDB($key);
+                $row = $comments->getCommentDB($uid);
             }
 
             // Set Class
@@ -75,15 +75,15 @@
             if(isset($this->commentRaw)){
                 return ($sanitize)? Sanitize::html($this->commentRaw): $this->commentRaw;
             }
-            $key = $this->page_key();
-            $path = PATH_PAGES . $key . DS . "comments" . DS;
-            $file = "comment_" . $this->vars["uid"] . ".php";
 
-            // Check File
-            if(!file_exists($path . $file)){
+            // Validate Comment File
+            $file = $this->file();
+            if(!file_exists($file)){
                 return false;
             }
-            $this->commentRaw = file_get_contents($path . $file);
+
+            // Read File
+            $this->commentRaw = file_get_contents($file);
             return $this->commentRaw($sanitize);
         }
 
@@ -125,133 +125,129 @@
         }
 
         /*
-         |  FIELD :: GET DEPTH
-         |  @since  0.1.0
-         */
-        public function depth(){
-            return 0;
-        }
-
-        /*
-         |  FIELD :: GET DATE
-         |  @since  0.1.0
-         */
-        public function date($format = false){
-            global $site;
-            $date = $this->getValue("dateRaw");
-            return Date::format($date, DB_DATE_FORMAT, ($format? $format: $site->dateFormat()));
-        }
-
-        /*
-         |  FIELD :: GET MODIFIED DATE
-         |  @since  0.1.0
-         */
-        public function dateModified($format = false){
-            global $site;
-            $date = $this->getValue("dateModifiedRaw");
-            return Date::format($date, DB_DATE_FORMAT, ($format? $format: $site->dateFormat()));
-        }
-
-        /*
-         |  FIELD :: TITLE
-         |  @since  0.1.0
-         */
-        public function title(){
-            return $this->getValue("title");
-        }
-
-        /*
-         |  FIELD :: TYPE
-         |  @since  0.1.0
-         */
-        public function type(){
-            return $this->getValue("type");
-        }
-        public function isPending(){
-            return $this->getValue("type") === "pending";
-        }
-        public function isPublic(){
-            return $this->getValue("type") === "approved";
-        }
-        public function isApproved(){
-            return $this->getValue("type") === "approved";
-        }
-        public function isRejected(){
-            return $this->getValue("type") === "rejected";
-        }
-        public function isSpam(){
-            return $this->getValue("type") === "spam";
-        }
-
-        /*
-         |  FIELD :: LIKE
-         |  @since  0.1.0
-         */
-        public function like(){
-            return (int) $this->getValue("like");
-        }
-
-        /*
-         |  FIELD :: DISLIKE
-         |  @since  0.1.0
-         */
-        public function dislike(){
-            return (int) $this->getValue("dislike");
-        }
-
-        /*
-         |  FIELD :: USERNAME
-         |  @since  0.1.0
-         */
-        public function username(){
-            return $this->getValue("username");
-        }
-
-        /*
-         |  FIELD :: EMAIL
-         |  @since  0.1.0
-         */
-        public function email(){
-            global $user, $users;
-
-            if($this->getValue("email") === "*"){
-                if($users->exists($this->getValue("username"))){
-                    $user = new User($this->getValue("username"));
-                    if(!empty($user->email())){
-                        return $user->email();
-                    }
-                }
-                return "comment@" . $_SERVER["SERVER_NAME"];
-            }
-            return $this->getValue("email");
-        }
-
-        /*
-         |  FIELD :: WEBSITE
-         |  @since  0.1.0
-         */
-        public function website(){
-            return $this->getValue("website");
-        }
-
-        /*
-         |  FIELD :: UNIQUE COMMENT ID
+         |  FIELD :: GET UID
          |  @since  0.1.0
          */
         public function uid(){
             return $this->getValue("uid");
         }
-
-        /*
-         |  FIELD :: KEY
-         |  @since  0.1.0
-         */
         public function key(){
-            return $this->getValue("page_key") . "/comment_" . $this->getValue("uid");
+            return $this->getValue("uid");
         }
 
         /*
-         |  FIELD :: PAGE KEY
+         |  FIELD :: GET (COMMENT FILE) PATH
+         |  @since  0.1.0
+         */
+        public function path(){
+            return PATH_PAGES . $this->getValue("page_key") . DS . "comments";
+        }
+
+        /*
+         |  FIELD :: GET (COMMENT FILE) PATH / FILE
+         |  @since  0.1.0
+         */
+        public function file(){
+            return $this->path() . DS . "c_" . $this->getValue("uid") . ".php";
+        }
+
+        /*
+         |  FIELD :: GET TYPE
+         |  @since  0.1.0
+         */
+        public function type(){
+            return $this->getValue("type");
+        }
+        public function isComment(){
+            return $this->getValue("type") === "comment";
+        }
+        public function isReply(){
+            return $this->getValue("type") === "reply";
+        }
+        public function isPingback(){
+            return $this->getValue("type") === "pingback";
+        }
+
+        /*
+         |  FIELD :: GET DEPTH
+         |  @since  0.1.0
+         */
+        public function depth(){
+            return (int) $this->getValue("depth");
+        }
+
+        /*
+         |  FIELD :: TITLE
+         |  @since  0.1.0
+         |
+         |  @param  bool    TRUE to sanitize the content, FALSE to return it plain.
+         |
+         |  @return string  The respective comment title as STRING.
+         */
+        public function title($sanitize = true){
+            if($sanitize){
+                return Sanitize::html($this->getValue("title"));
+            }
+            return $this->getValue("title");
+        }
+
+        /*
+         |  FIELD :: GET STATUS
+         |  @since  0.1.0
+         */
+        public function status(){
+            return $this->getValue("status");
+        }
+        public function isPending(){
+            return $this->getValue("status") === "pending";
+        }
+        public function isPublic(){
+            return $this->getValue("status") === "approved";
+        }
+        public function isApproved(){
+            return $this->getValue("status") === "approved";
+        }
+        public function isRejected(){
+            return $this->getValue("status") === "rejected";
+        }
+        public function isSpam(){
+            return $this->getValue("status") === "spam";
+        }
+
+        /*
+         |  FIELD :: GET RATING
+         |  @since  0.1.0
+         */
+        public function rating(){
+            return $this->getValue("rating");
+        }
+
+        /*
+         |  FIELD :: GET LIKE
+         |  @since  0.1.0
+         */
+        public function like(){
+            $rating = $this->getValue("rating");
+            if(is_array($rating) && count($rating) >= 1){
+                return $rating[0];
+            }
+            return 0;
+        }
+
+        /*
+         |  FIELD :: GET DISLIKE
+         |  @since  0.1.0
+         */
+        public function dislike(){
+            $rating = $this->getValue("rating");
+            if(is_array($rating) && count($rating) >= 2){
+                return $rating[1];
+            }
+            return 0;
+        }
+
+        /*
+         |  FIELD :: GET PAGE KEY
          |  @since  0.1.0
          */
         public function page_key(){
@@ -259,18 +255,161 @@
         }
 
         /*
-         |  FIELD :: PARENT COMMENT ID
+         |  FIELD :: GET PARENT UID
          |  @since  0.1.0
          */
-        public function parent_id(){
-            return $this->getValue("parent_id");
+        public function parent_uid(){
+            return $this->getValue("parent_uid");
         }
 
         /*
-         |  FIELD :: HAS SUBSCRIBED
+         |  FIELD :: GET PARENT
          |  @since  0.1.0
          */
-        public function hasSubscribed(){
+        public function parent(){
+            global $comments;
+            if($comments->exists($this->getValue("parent_uid"))){
+                return new Comment($this->getValue("parent_uid"));
+            }
+            return false;
+        }
+
+        /*
+         |  FIELD :: GET CHILDREN
+         |  @since  0.1.0
+         |
+         |  @param  multi   The single comment status which should return, multiple as ARRAY.
+         |                  Use `null` to return each children comment.
+         |  @param  string  The return type, which allows the following strings:
+         |                      "uids"      Return just the respective UID / keys
+         |                      "keys"      Return just the respective UID / keys
+         |                      "objects"   Return single Comment instances
+         |                      "arrays"    Return the unformatted DB arrays
+         |
+         |  @return multi   FALSE on error, the respective array on succes.
+         */
+        public function children($status = "approved", $return = "objects"){
+            global $comments;
+
+            // Check Parameter
+            if(is_string($status)){
+                $status = array($status);
+            }
+            if(!is_array($status) && $status !== null){
+                return false;
+            }
+
+            // Get Children
+            $return = array();
+            foreach($this->getDB(false) AS $uid => $value){
+                if($value["parent"] !== $this->getValue("uid")){
+                    continue;
+                }
+                if(is_array($status) && !in_array($value["status"], $status)){
+                    continue;
+                }
+
+                if($return === "uids" || $return == "keys"){
+                    $return[] = $uid;
+                } else if($return === "objects"){
+                    $return[$uid] = new Comment($uid);
+                } else {
+                    $return[$uid] = $value;
+                }
+            }
+            return $return;
+        }
+
+        /*
+         |  FIELD :: GET UUID
+         |  @since  0.1.0
+         */
+        public function uuid(){
+            return $this->getValue("uuid");
+        }
+
+        /*
+         |  FIELD :: GET USERNAME
+         |  @since  0.1.0
+         */
+        public function username(){
+            global $L, $users;
+
+            if($this->getValue("uuid") === "bludit"){
+                if($users->exists($this->getValue("username")) !== false){
+                    $user = new User($this->getValue("username"));
+                    return $user->nickname();
+                }
+                return false;
+            }
+            return $this->getValue("username");
+        }
+
+        /*
+         |  FIELD :: GET EMAIL
+         |  @since  0.1.0
+         */
+        public function email(){
+            global $L, $users;
+
+            if($this->getValue("uuid") === "bludit"){
+                if($users->exists($this->getValue("username")) !== false){
+                    $user = new User($this->getValue("username"));
+                    return $user->email();
+                }
+                return false;
+            }
+            return $this->getValue("email");
+        }
+
+        /*
+         |  FIELD :: SUBSCRIBE
+         |  @since  0.1.0
+         */
+        public function subscribe(){
             return $this->getValue("subscribe");
+        }
+        public function hasSubscribed(){
+            return $this->getValue("subscribe") === true;
+        }
+
+        /*
+         |  FIELD :: GET / FORMAT DATE
+         |  @since  0.1.0
+         |
+         |  @param  string  The respective format, which should be used for the output.
+         |
+         |  @return string  The formatted Date Output.
+         */
+        public function date($format = false, $type = "date"){
+            global $site;
+            $date = $this->getValue("{$type}Raw");
+            return Date::format($date, DB_DATE_FORMAT, ($format? $format: $site->dateFormat()));
+        }
+        public function dateModified($format = false){
+            return $this->date($format, "dateModified");
+        }
+        public function dateAudit($format = false){
+            return $this->date($format, "dateAudit");
+        }
+
+        /*
+         |  FIELD :: GET CUSTOM
+         |  @since  0.1.0
+         |
+         |  @param  string  The respective custom key, to get the value.
+         |                  Use `null` to get all custom values.
+         |
+         |  @return multi   The custom value, all customs as ARRAY or FALSE on failure.
+         */
+        public function custom($key = NULL){
+            $custom = $this->getValue("custom");
+            if($key !== null){
+                if(array_key_exists($key, $custom)){
+                    return $custom[$key];
+                }
+                return false;
+            }
+            return $custom;
         }
     }

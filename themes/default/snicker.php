@@ -82,9 +82,9 @@
             global $page, $users, $security, $snicker;
 
             // Check User
-            $user = $users->exists($comment->username());
-            if($user && $comment->getValue("email") === "*"){
-                $user = new User($comment->username());
+            $user = $users->exists($comment->getValue("username"));
+            if($user && $comment->getValue("uuid") === "bludit"){
+                $user = new User($comment->getValue("username"));
             }
 
             // Render
