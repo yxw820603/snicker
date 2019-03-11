@@ -121,9 +121,90 @@
                     </footer>
                 </form>
             <?php
-            
+
             unset($_SESSION["s_snicker-alert"]);
             unset($_SESSION["s_snicker-success"]);
+        }
+
+        /*
+         |  RENDER :: PAGINATION
+         |  @since  0.1.0
+         */
+        public function pagination($location, $cpage, $limit, $count){
+            global $url;
+
+            // Data
+            $link = DOMAIN . $url->uri() . "?cpage=%d#snicker-comments-list";
+            $maxpages = (int) ceil($count / $limit);
+            $prev = ($cpage === 1)? false: $cpage - 1;
+            $next = ($cpage === $maxpages)? false: $cpage + 1;
+
+            // Top Position
+            if($location === "top"){
+                ?>
+                    <div class="pagination pagination-top">
+                        <?php if($cpage === 1){ ?>
+                            <span class="pagination-button button-previous disabled">Previous Comments</span>
+                        <?php } else { ?>
+                            <a href="<?php printf($link, $prev); ?>" class="pagination-button button-previous">Previous Comments</a>
+                        <?php } ?>
+
+                        <?php if($cpage < $maxpages){ ?>
+                            <a href="<?php printf($link, $next); ?>" class="pagination-button button-next">Next Comments</a>
+                        <?php } else { ?>
+                            <span class="pagination-button button-next disabled">Next Comments</span>
+                        <?php } ?>
+                    </div>
+                <?php
+            }
+
+            // Bottom Position
+            if($location === "bottom"){
+                ?>
+                    <div class="pagination pagination-bottom">
+                    <div class="pagination-inner">
+                        <?php if($prev === false){ ?>
+                            <span class="pagination-button button-first disabled">&laquo;</span>
+                            <span class="pagination-button button-previous disabled">&lsaquo;</span>
+                        <?php } else { ?>
+                            <a href="<?php printf($link, 1); ?>" class="pagination-button button-first">&laquo;</a>
+                            <a href="<?php printf($link, $prev); ?>" class="pagination-button button-previous">&lsaquo;</a>
+                        <?php } ?>
+
+                        <?php
+                            if($maxpages < 6){
+                                $start = 1;
+                                $stop = $maxpages;
+                            } else {
+                                $start = ($cpage > 3)? $cpage - 3: $cpage;
+                                $stop = ($cpage + 3 > $maxpages)? $cpage + 3: $maxpages;
+                            }
+
+                            if($start > 1){
+                                ?><span class="pagination-separator">...</span><?php
+                            }
+                            for($i = $start; $i <= $stop; $i++){
+                                $active = ($i == $cpage)? "active": "";
+                                ?>
+                                    <a href="<?php printf($link, $i); ?>" class="pagination-button button-number <?php echo $active; ?>"><?php echo $i; ?></a>
+                                <?php
+                            }
+                            if($stop < $maxpages){
+                                ?><span class="pagination-separator">...</span><?php
+                            }
+                        ?>
+
+                        <?php if($next !== false){ ?>
+                            <a href="<?php printf($link, $next); ?>" class="pagination-button button-next">&rsaquo;</a>
+                            <a href="<?php printf($link, $maxpages); ?>" class="pagination-button button-last">&raquo;</a>
+                        <?php } else { ?>
+                            <span class="pagination-button button-next disabled">&rsaquo;</span>
+                            <span class="pagination-button button-last disabled">&raquo;</span>
+                        <?php } ?>
+                    </div>
+                    </div>
+                <?php
+            }
         }
 
         /*

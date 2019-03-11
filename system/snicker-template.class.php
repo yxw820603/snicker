@@ -21,4 +21,9 @@
          |  REQUIRED :: COMMENT
          */
         abstract public function comment($comment, $key);
+
+        /*
+         |  REQUIRED :: PAGINATION
+         */
+        abstract public function pagination($loction, $cpage, $limit, $count);
     }

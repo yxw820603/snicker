@@ -11,9 +11,10 @@ You have been warned!
 ### Missing Features
 The following features are currently / still missing.
 
-- Frontend Pagination
 - Depth-Depending View 4 the frontend comments
 - Translation Strings (Strings are currently hardcoded)
+- Disabled Comments Message
+- No Comments Message
 - Moderation Message for comment authors (Check if pending + IP / UUID)
 - Subscribe Function (may doesn't get released directly on 0.1.0!)
 - Some other Stuff...

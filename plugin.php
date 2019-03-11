@@ -818,6 +818,7 @@
                 Session::start();
             }
             $data = Session::get("snicker-comment");
+            $limit = $this->getValue("frontend_per_page");
 
             // Fetch Data
             if(is_array($data)){
@@ -840,14 +841,23 @@
             }
 
             // Render Comment List
-            $list = $comments->getPageCommentsDB($page->key());
+            $num = (isset($_GET["cpage"]) && $_GET["cpage"] > 1)? (int) $_GET["cpage"]: 1;
+            $list = $comments->getList($num, $limit, "approved", $page->key());
+            $count = $comments->count("approved", $page->key());
+
             if(count($list) < 1){
                 // empty
             } else {
                 ?><div id="snicker-comments-list" class="snicker-comments-list"><?php
+                if($count > $limit){
+                    print($this->renderTheme("pagination", array("top", $num, $limit, $count)));
+                }
                 foreach($list AS $key){
                     $comment = new Comment($key);
                     print($this->renderTheme("comment", array($comment, $key)));
+                }
+                if($count > $limit){
+                    print($this->renderTheme("pagination", array("bottom", $num, $limit, $count)));
                 }
                 ?></div><?php
             }
