@@ -25,6 +25,14 @@
     -moz-border-radius: 5px;
     -webkit-border-radius: 5px;
 }
+.snicker-comments .disabled-comments{
+    padding: 15px 0;
+    display: block;
+    font-size: 16px;
+    text-align: center;
+    font-style: italic;
+    line-height: 50px;
+}
 .snicker-comments form.comment-form{
     width: 100%;
     margin: 0;
@@ -291,6 +299,21 @@
 .snicker-comments-list{
     width: 100%;
     display: block;
+}
+.snicker-comments-list .no-comments{
+    width: 100%;
+    margin: 15px 0;
+    padding: 15px 0;
+    display: block;
+    font-size: 16px;
+    text-align: center;
+    font-style: italic;
+    line-height: 50px;
+    background-color: #f4f8fa;
+    border: 1px solid #c0c4c8;
+    border-radius: 5px;
+    -moz-border-radius: 5px;
+    -webkit-border-radius: 5px;
 }
 .snicker-comments-list .comment{
     width: 100%;

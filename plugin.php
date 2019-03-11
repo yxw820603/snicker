@@ -835,11 +835,17 @@
             }
 
             // Render Form
+            ?><div id="snicker-comments-form" class="snicker-comments"><?php
             if($page->allowComments()){
-                ?><div id="snicker-comments-form" class="snicker-comments"><?php
                 print($this->renderTheme("form", array($user, $mail, $title, $comment)));
-                ?></div><?php
+            } else {
+                ?>
+                    <div class="disabled-comments">
+                        The comment section on this page has been disabled by the author!
+                    </div>
+                <?php
             }
+            ?></div><?php
 
             // Render Comment List
             $max = ceil($count / $limit);
@@ -852,7 +858,13 @@
 
             ?><div id="snicker-comments-list" class="snicker-comments-list"><?php
             if(count($list) < 1){
-                // empty
+                if($page->allowComments()){
+                    ?>
+                        <div class="no-comments">
+                            Currently there are no comments, so be the first!
+                        </div>
+                    <?php
+                }
             } else {
                 if($count > $limit){
                     print($this->renderTheme("pagination", array("top", $num, $limit, $count)));
