@@ -57,9 +57,19 @@
                     <?php } ?>
 
                     <article>
+                        <?php if(Alert::get("snicker-alert") !== false){ ?>
+                            <div class="comment-alert alert-error">
+                                <?php Alert::p("snicker-alert"); ?>
+                            </div>
+                        <?php } else if(Alert::get("snicker-success") !== false){ ?>
+                            <div class="comment-alert alert-success">
+                                <?php Alert::p("snicker-success"); ?>
+                            </div>
+                        <?php } ?>
+
                         <?php if($title !== false){ ?>
                             <p>
-                                <input type="text" id="comment-title" name="comment[title]" value="" placeholder="Comment Title" />
+                                <input type="text" id="comment-title" name="comment[title]" value="<?php echo $title; ?>" placeholder="Comment Title" />
                             </p>
                         <?php } ?>
                         <p>
@@ -111,6 +121,9 @@
                     </footer>
                 </form>
             <?php
+            
+            unset($_SESSION["s_snicker-alert"]);
+            unset($_SESSION["s_snicker-success"]);
         }
 
         /*

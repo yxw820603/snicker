@@ -35,6 +35,30 @@
         }
     }
 
+    /*
+     |  ALERT HELPER
+     */
+    function showAlert(type, message, parent){
+        var alert = d.createElement("DIV");
+            alert.className = "comment-alert alert-" + type;
+            alert.innerText = message;
+
+        // Remove Existing Status
+        var alerts = parent.querySelectorAll(".comment-alert");
+        if(alerts.length > 0){
+            Array.prototype.forEach.call(alerts, function(item){
+                item.parentElement.removeChild(item);
+            });
+        }
+
+        // Add Status
+        if(parent.children.length > 0){
+            parent.insertBefore(alert, parent.children[0]);
+        } else {
+            parent.appendChild(alert);
+        }
+    }
+
     // Ready?
     d.addEventListener("DOMContentLoaded", function(){
         "use strict";
@@ -83,6 +107,10 @@
                                 field[i].value = "";
                             }
                         }
+
+                        showAlert("success", data.success, form.querySelector("article"));
+                    } else if(data.status === "error"){
+                        showAlert("error", data.error, form.querySelector("article"));
                     }
 
                     // Re-Enable Button

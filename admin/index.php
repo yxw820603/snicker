@@ -462,7 +462,7 @@
             </div>
 
             <div class="form-group row">
-                <label for="sn-error-1" class="col-sm-3 col-form-label">Error: Username or eMail is missing</label>
+                <label for="sn-error-1" class="col-sm-3 col-form-label">Error: Unknown Error, Try again</label>
                 <div class="col-sm-9">
                     <input type="text" id="sn-error-1" name="string_error_1" value="<?php echo $snicker->getValue("string_error_1"); ?>"
                         class="form-control" placeholder="<?php echo $snicker->dbFields["string_error_1"]; ?>" />
@@ -470,7 +470,7 @@
             </div>
 
             <div class="form-group row">
-                <label for="sn-error-2" class="col-sm-3 col-form-label">Error: Comment Text is missing</label>
+                <label for="sn-error-2" class="col-sm-3 col-form-label">Error: Username or eMail is missing</label>
                 <div class="col-sm-9">
                     <input type="text" id="sn-error-2" name="string_error_2" value="<?php echo $snicker->getValue("string_error_2"); ?>"
                         class="form-control" placeholder="<?php echo $snicker->dbFields["string_error_2"]; ?>" />
@@ -478,7 +478,7 @@
             </div>
 
             <div class="form-group row">
-                <label for="sn-error-3" class="col-sm-3 col-form-label">Error: Comment Title is missing</label>
+                <label for="sn-error-3" class="col-sm-3 col-form-label">Error: Comment Text is missing</label>
                 <div class="col-sm-9">
                     <input type="text" id="sn-error-3" name="string_error_3" value="<?php echo $snicker->getValue("string_error_3"); ?>"
                         class="form-control" placeholder="<?php echo $snicker->dbFields["string_error_3"]; ?>" />
@@ -486,7 +486,7 @@
             </div>
 
             <div class="form-group row">
-                <label for="sn-error-4" class="col-sm-3 col-form-label">Error: Marked as SPAM</label>
+                <label for="sn-error-4" class="col-sm-3 col-form-label">Error: Comment Title is missing</label>
                 <div class="col-sm-9">
                     <input type="text" id="sn-error-4" name="string_error_4" value="<?php echo $snicker->getValue("string_error_4"); ?>"
                         class="form-control" placeholder="<?php echo $snicker->dbFields["string_error_4"]; ?>" />
@@ -494,10 +494,26 @@
             </div>
 
             <div class="form-group row">
-                <label for="sn-error-5" class="col-sm-3 col-form-label">Error: Unknown Error, Try again</label>
+                <label for="sn-error-5" class="col-sm-3 col-form-label">Error: Terms not accepted</label>
                 <div class="col-sm-9">
                     <input type="text" id="sn-error-5" name="string_error_5" value="<?php echo $snicker->getValue("string_error_5"); ?>"
                         class="form-control" placeholder="<?php echo $snicker->dbFields["string_error_5"]; ?>" />
+                </div>
+            </div>
+
+            <div class="form-group row">
+                <label for="sn-error-6" class="col-sm-3 col-form-label">Error: Marked as SPAM</label>
+                <div class="col-sm-9">
+                    <input type="text" id="sn-error-6" name="string_error_6" value="<?php echo $snicker->getValue("string_error_6"); ?>"
+                        class="form-control" placeholder="<?php echo $snicker->dbFields["string_error_6"]; ?>" />
+                </div>
+            </div>
+
+            <div class="form-group row">
+                <label for="sn-error-7" class="col-sm-3 col-form-label">Error: Already Voted</label>
+                <div class="col-sm-9">
+                    <input type="text" id="sn-error-7" name="string_error_7" value="<?php echo $snicker->getValue("string_error_7"); ?>"
+                        class="form-control" placeholder="<?php echo $snicker->dbFields["string_error_7"]; ?>" />
                 </div>
             </div>
 

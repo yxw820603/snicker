@@ -225,6 +225,25 @@
     -moz-animation: spin 2s linear 0ms infinite;
     -webkit-animation: spin 2s linear 0ms infinite;
 }
+.snicker-comments form.comment-form .comment-alert{
+    width: 100%;
+    margin: 0 0 15px 0;
+    padding: 10px 15px;
+    display: block;
+    font-size: 85%;
+    background-color: #f4f8fa;
+    border-radius: 3px;
+    -moz-border-radius: 3px;
+    -webkit-border-radius: 3px;
+}
+.snicker-comments form.comment-form .comment-alert.alert-error{
+    color: #ffffff;
+    background-color: #DC3545;
+}
+.snicker-comments form.comment-form .comment-alert.alert-success{
+    color: #ffffff;
+    background-color: #28A745;
+}
 .snicker-comments form.comment-form .comment-reply{
     margin: 0;
     padding: 10px 15px;

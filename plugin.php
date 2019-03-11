@@ -104,9 +104,9 @@
             // POST Redirect
             if($this->backendRequest !== "ajax"){
                 if($status){
-                    Alert::set($data["success"], ALERT_STATUS_OK);
+                    Alert::set($data["success"], ALERT_STATUS_OK, "snicker-success");
                 } else {
-                    Alert::set($data["error"], ALERT_STATUS_FAIL);
+                    Alert::set($data["error"], ALERT_STATUS_FAIL, "snicker-alert");
                 }
                 $action = isset($_GET["action"])? $_GET["action"]: $_POST["action"];
 
@@ -163,11 +163,13 @@
                 "string_success_1"          => "Thanks for your comment!",
                 "string_success_2"          => "Thanks for your comment, please confirm your subscription via the link we sent to your eMail address!",
                 "string_success_3"          => "Thanks for voting this comment!",
-                "string_error_1"            => "An error occured: The Username or the eMail address is missing!",
-                "string_error_2"            => "An error occured: The comment text is missing!",
-                "string_error_3"            => "An error occured: The comment title is missing!",
-                "string_error_4"            => "An error occured: Your IP address or eMail address has been marked as Spam!",
-                "string_error_5"            => "An unknown error occured, please reload the page and try it again.",
+                "string_error_1"            => "An unknown error occured, please reload the page and try it again.",
+                "string_error_2"            => "An error occured: The Username or the eMail address is missing!",
+                "string_error_3"            => "An error occured: The comment text is missing!",
+                "string_error_4"            => "An error occured: The comment title is missing!",
+                "string_error_5"            => "An error occured: You need to accept the Terms to comment!",
+                "string_error_6"            => "An error occured: Your IP address or eMail address has been marked as Spam!",
+                "string_error_7"            => "An error occured: You already rated this comment!",
             );
 
             // Check Backend
@@ -396,14 +398,14 @@
 
             // Validate eMails
             if(!Valid::email($config["subscription_from"])){
-                Alert::set("The eMail 'From' Address for the Subscription is invalid!", 1, "error-from");
+                Alert::set("The eMail 'From' Address for the Subscription is invalid!", ALERT_STATUS_FAIL, "snicker-error-alert");
                 $config["subscription_from"] = $this->dbFields["subscription_from"];
             } else {
                 $config["subscription_from"] = Sanitize::email($config["subscription_from"]);
             }
 
             if(!Valid::email($config["subscription_reply"])){
-                Alert::set("The eMail 'Reply' Address for the Subscription is invalid!", 1, "error-reply");
+                Alert::set("The eMail 'Reply' Address for the Subscription is invalid!", ALERT_STATUS_FAIL, "snicker-error-alert");
                 $config["subscription_reply"] = $this->dbFields["subscription_reply"];
             } else {
                 $config["subscription_reply"] = Sanitize::email($config["subscription_reply"]);
@@ -506,6 +508,12 @@
             global $comments, $pages, $url, $users;
             $referer = DOMAIN . $url->uri();
 
+            // Temp
+            if(!Session::started()){
+                Session::start();
+            }
+            Session::set("snicker-comment", $comment);
+
             // Check Basics
             if(!isset($comment["page_key"]) || !$pages->exists($comment["page_key"])){
                 return $this->handleResponse(false, array(
@@ -522,12 +530,22 @@
                 }
             }
 
+            // Sanitize Terms
+            if($this->getValue("frontend_terms") !== "disabled"){
+                if(!isset($comment["terms"]) || $comment["terms"] !== "1"){
+                    return $this->handleResponse(false, array(
+                        "referer"   => $referer . "#snicker-comments-form",
+                        "error"     => $this->getValue("string_error_5")
+                    ));
+                }
+            }
+
             // Sanitize Title
             if($this->getValue("comment_title") === "required"){
                 if(!isset($comment["title"]) || empty($comment["title"])){
                     return $this->handleResponse(false, array(
                         "referer"   => $referer . "#snicker-comments-form",
-                        "error"     => $this->getValue("string_error_3")
+                        "error"     => $this->getValue("string_error_4")
                     ));
                 }
             }
@@ -537,7 +555,7 @@
             if(!isset($comment["comment"]) || empty($comment["comment"])){
                 return $this->handleResponse(false, array(
                     "referer"   => $referer . "#snicker-comments-form",
-                    "error"     => $this->getValue("string_error_2")
+                    "error"     => $this->getValue("string_error_3")
                 ));
             }
             $comment["comment"] = Sanitize::html($comment["comment"]);
@@ -547,7 +565,7 @@
                 if(!$users->exists($comment["user"])){
                     return $this->handleResponse(false, array(
                         "referer"   => $referer . "#snicker-comments-form",
-                        "error"     => $this->getValue("string_error_1")
+                        "error"     => $this->getValue("string_error_2")
                     ));
                 }
                 $user = new User($comment["user"]);
@@ -555,7 +573,7 @@
                 if(md5($user->tokenAuth()) !== $comment["token"]){
                     return $this->handleResponse(false, array(
                         "referer"   => $referer . "#snicker-comments-form",
-                        "error"     => $this->getValue("string_error_1")
+                        "error"     => $this->getValue("string_error_2")
                     ));
                 }
                 unset($comment["user"], $comment["token"]);
@@ -568,7 +586,7 @@
                 if(!Valid::email($comment["email"])){
                     return $this->handleResponse(false, array(
                         "referer"   => $referer . "#snicker-comments-form",
-                        "error"     => $this->getValue("string_error_1")
+                        "error"     => $this->getValue("string_error_2")
                     ));
                 }
                 $comment["uuid"] = null;
@@ -578,7 +596,7 @@
             } else {
                 return $this->handleResponse(false, array(
                     "referer"   => $referer . "#snicker-comments-form",
-                    "error"     => $this->getValue("string_error_1")
+                    "error"     => $this->getValue("string_error_2")
                 ));;
             }
 
@@ -591,9 +609,11 @@
             if(($uid = $comments->add($comment)) === false){
                 return $this->handleResponse(false, array(
                     "referer"   => $referer . "#snicker-comments-form",
-                    "error"     => $this->getValue("string_error_5")
+                    "error"     => $this->getValue("string_error_1")
                 ));
             }
+
+            Session::set("snicker-comment", null);
             return $this->handleResponse(true, array(
                 "referer"   => $referer . "#comment-" . $uid,
                 "success"   => $this->getValue("string_success_" . ((int) $comment["subscribe"] + 1)),
@@ -709,7 +729,7 @@
             if(!$comments->exists($uid)){
                 return $this->handleResponse(false, array(
                     "referer"   => $referer . "#snicker-comments-form",
-                    "error"     => $this->getValue("string_error_5")
+                    "error"     => $this->getValue("string_error_1")
                 ));
             }
             $comment = new Comment($uid);
@@ -726,10 +746,10 @@
 
                 if(array_key_exists($uid, $rate)){
                     if($rate[$uid] === $type){
-                        return $this->handleResponse(true, array(
+                        return $this->handleResponse(false, array(
                             "referer"   => $referer . "#comment-" . $comment->uid(),
-                            "success"   => $this->getValue("string_success_3"),
-                            "rating"    => $comment->rating()
+                            "error"     => $this->getValue("string_error_7"),
+                            "rating"    => $rating
                         ));
                     } else {
                         $rating[($rate[$uid] === "like"? 0: 1)]--;
@@ -743,7 +763,7 @@
             if(($uid = $comments->edit($uid, array("rating" => $rating))) === false){
                 return $this->handleResponse(false, array(
                     "referer"   => $referer . "#comment-" . $comment->uid(),
-                    "error"     => $this->getValue("string_error_5"),
+                    "error"     => $this->getValue("string_error_1"),
                     "rating"    => $rating
                 ));
             }
@@ -793,13 +813,20 @@
         public function renderComments(){
             global $page, $comments;
 
+            // Get Temp
+            if(!Session::started()){
+                Session::start();
+            }
+            $data = Session::get("snicker-comment");
+
             // Fetch Data
-            $user = $mail = $title = $comment = "";
-            if(isset($_POST["comment"])){
-                $user = isset($_POST["comment"]["username"])? $_POST["comment"]["username"]: "";
-                $mail = isset($_POST["comment"]["email"])? $_POST["comment"]["email"]: "";
-                $title = isset($_POST["comment"]["title"])? $_POST["comment"]["title"]: "";
-                $comment = isset($_POST["comment"]["comment"])? $_POST["comment"]["comment"]: "";
+            if(is_array($data)){
+                $user = isset($data["username"])? $data["username"]: "";
+                $mail = isset($data["email"])? $data["email"]: "";
+                $title = isset($data["title"])? $data["title"]: "";
+                $comment = isset($data["comment"])? $data["comment"]: "";
+            } else {
+                $user = $mail = $title = $comment = "";
             }
             if($this->getValue("comment_title") === "disabled"){
                 $title = false;

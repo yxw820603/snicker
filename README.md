@@ -12,9 +12,6 @@ You have been warned!
 The following features are currently / still missing.
 
 -   Translations (Strings are currently hardcoded)
--   Edit Screen for the comments (Admin Dashboard)
 -   Moderation Message for the Comment authors (Check if pending + IP / UUID)
 -   Subscribe Feature (may doesn't get released directly on 0.1.0!)
--   AJAX functionality on the frontend
--   Like / Dislike function
 -   Some other stuff...
