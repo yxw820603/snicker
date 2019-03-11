@@ -189,7 +189,7 @@
                     define("SNICKER_PATH", PATH_PLUGINS . basename(__DIR__) . "/");
                     define("SNICKER_DOMAIN", DOMAIN_PLUGINS . basename(__DIR__) . "/");
                     define("SNICKER_VERSION", "0.1.0");
-                    define("DB_SNICKER_COMMENTS", PATH_DATABASES . "comments.php");
+                    define("DB_SNICKER_COMMENTS", $this->workspace() . "comments.php");
 
                     // Load Plugin
                     require_once("system/comments.class.php");
@@ -819,6 +819,7 @@
             }
             $data = Session::get("snicker-comment");
             $limit = $this->getValue("frontend_per_page");
+            $count = $comments->count("approved", $page->key());
 
             // Fetch Data
             if(is_array($data)){
@@ -841,14 +842,18 @@
             }
 
             // Render Comment List
-            $num = (isset($_GET["cpage"]) && $_GET["cpage"] > 1)? (int) $_GET["cpage"]: 1;
+            $max = ceil($count / $limit);
+            if(isset($_GET["cpage"]) && $_GET["cpage"] > 1){
+                $num = ($_GET["cpage"] < $max)? $_GET["cpage"]: $max;
+            } else {
+                $num = 1;
+            }
             $list = $comments->getList($num, $limit, "approved", $page->key());
-            $count = $comments->count("approved", $page->key());
 
+            ?><div id="snicker-comments-list" class="snicker-comments-list"><?php
             if(count($list) < 1){
                 // empty
             } else {
-                ?><div id="snicker-comments-list" class="snicker-comments-list"><?php
                 if($count > $limit){
                     print($this->renderTheme("pagination", array("top", $num, $limit, $count)));
                 }
@@ -859,8 +864,8 @@
                 if($count > $limit){
                     print($this->renderTheme("pagination", array("bottom", $num, $limit, $count)));
                 }
-                ?></div><?php
             }
+            ?></div><?php
         }
 
 

@@ -92,16 +92,22 @@
                     var data = JSON.parse(json);
 
                     // Add Comment
+                    console.log(data);
                     if(list && data.status == "success" && "comment" in data){
-                        list.insertAdjacentHTML("afterbegin", data.comment);
-                        list.firstElementChild.classList.add("new-comment");
-                        list.firstElementChild.scrollIntoView({ behavior: "smooth", block: "center" });
+                        if(list.querySelector(".comment")){
+                            list.querySelector(".comment").insertAdjacentHTML("beforebegin", data.comment);
+                        } else {
+                            list.insertAdjacentHTML("afterbegin", data.comment);
+                        }
+                        list.querySelector(".comment").classList.add("new-comment");
+                        list.querySelector(".comment").scrollIntoView({ behavior: "smooth", block: "center" });
 
+                        // Empty Form
                         var field = self.querySelectorAll("input,textarea,select");
                         for(var i = 0, l = field.length; i < l; i++){
                             if(field[i].tagName == "SELECT"){
                                 field[i].options[0].selected = true;
-                            } else if(field[i].getAttribute("checkbox")){
+                            } else if(field[i].getAttribute("type") === "checkbox"){
                                 field[i].checked = false;
                             } else {
                                 field[i].value = "";
