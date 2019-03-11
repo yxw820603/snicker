@@ -218,6 +218,79 @@
             return isset($this->db[$uid]);
         }
 
+        /*
+         |  DATA :: LIST COMMENTS
+         |  @since  0.1.0
+         */
+        public function getList($page, $limit, $status = "approved", $page_key = null){
+            $status = is_string($status)? array($status): $status;
+            if(!is_array($status)){
+                $status = null;
+            }
+            $page_key = is_string($page_key)? array($page_key): $page_key;
+            if(!is_array($page_key)){
+                $page_key = null;
+            }
+
+            // Format List
+            $list = array();
+            foreach($this->db AS $key => $fields){
+                if($page_key !== null && !in_array($fields["page_key"], $page_key)){
+                    continue;
+                }
+                if($status !== null && !in_array($fields["status"], $status)){
+                    continue;
+                }
+                array_push($list, $key);
+            }
+
+            // Limit
+            if($limit == -1){
+                return $list;
+            }
+
+            // Offset
+            $offset = $limit * ($page - 1);
+            $count  = min(($offset + $limit - 1), count($list));
+            if($offset < 0 || $offset > $count){
+                return false;
+            }
+            return array_slice($list, $offset, $limit, true);
+        }
+
+        /*
+         |  DATA :: COUNT COMMENTS
+         |  @since  0.1.0
+         */
+        public function count($status = "approved", $page_key = null){
+            $status = is_string($status)? array($status): $status;
+            if(!is_array($status)){
+                $status = null;
+            }
+            $page_key = is_string($page_key)? array($page_key): $page_key;
+            if(!is_array($page_key)){
+                $page_key = null;
+            }
+
+            // Count All
+            if($status === null && $page_key === null){
+                return count($this->db);
+            }
+
+            // Count
+            $count = 0;
+            foreach($this->db AS $key => $fields){
+                if($page_key !== null && !in_array($fields["page_key"], $page_key)){
+                    continue;
+                }
+                if($status !== null && !in_array($fields["status"], $status)){
+                    continue;
+                }
+                $count++;
+            }
+            return $count;
+        }
+
 
         /*
          |  HANDLE :: ADD A NEW COMMENT
@@ -281,7 +354,7 @@
             // Insert and Return
             $this->db[$uid] = $row;
             $this->sortBy();
-            if($this->save() === true){
+            if($this->save() !== true){
                 Log::set(__METHOD__, "error-update-db");
                 return false;
             }
@@ -363,7 +436,7 @@
             $this->db[$uid] = $row;
             $this->sortBy();
 
-            if($this->save() === true){
+            if($this->save() !== true){
                 Log::set(__METHOD__, "error-update-db");
                 return false;
             }

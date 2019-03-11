@@ -1,5 +1,5 @@
 
-.nav.nav-pills .nav-link.nav-public.active{
+.nav.nav-pills .nav-link.nav-approved.active{
     background-color: #28A745;
 }
 .nav.nav-pills .nav-link.nav-pending .badge{
@@ -18,4 +18,16 @@
 }
 .nav.nav-pills .nav-link.nav-spam.active{
     background-color: #DC3545;
+}
+
+.btn-group.btn-group-pagination .btn{
+    width: 34px;
+    padding-top: 5px;
+    padding-bottom: 7px;
+    font-size: 20px;
+    line-height: 20px;
+    text-align: center;
+}
+.btn-group.btn-group-pagination .btn.disabled{
+    cursor: not-allowed;
 }

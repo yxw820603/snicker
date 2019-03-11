@@ -11,12 +11,13 @@
  */
     if(!defined("BLUDIT")){ die("Go directly to Jail. Do not pass Go. Do not collect 200 Cookies!"); }
 
-    class SnickerCommentsPlugin extends Plugin{
+    class SnickerPlugin extends Plugin{
         /*
          |  BACKEND VARIABLES
          */
-        private $backend = false;
-        private $backendView = null;
+        private $backend = false;               // Is Backend
+        private $backendView = null;            // Backend View / File
+        private $backendRequest = null;         // Backend Request Type ("post", "get", "ajax")
 
         /*
          |  CONSTRUCTOR
@@ -31,6 +32,13 @@
         /*
          |  HELPER :: SELECTED
          |  @since  0.1.0
+         |
+         |  @param  string  The respective option key.
+         |  @param  multi   The value to compare with.
+         |  @param  bool    TRUE to print `selected="selected"`, FALSE to return the string.
+         |                  Use `null` to return as boolean!
+         |
+         |  @return multi   The respective string, nothing or a BOOLEAN indicator.
          */
         public function selected($field, $value = true, $print = true){
             if($this->getValue($field) == $value){
@@ -50,6 +58,13 @@
         /*
          |  HELPER :: CHECKED
          |  @since  0.1.0
+         |
+         |  @param  string  The respective option key.
+         |  @param  multi   The value to compare with.
+         |  @param  bool    TRUE to print `checked="checked"`, FALSE to return the string.
+         |                  Use `null` to return as boolean!
+         |
+         |  @return multi   The respective string, nothing or a BOOLEAN indicator.
          */
         public function checked($field, $value = true, $print = true){
             if($this->getValue($field) == $value){
@@ -64,6 +79,56 @@
                 return $checked;
             }
             print($checked);
+        }
+
+        /*
+         |  HELPER :: RESPONSE
+         |  @since  0.1.0
+         |
+         |  @param  bool    TRUE on success, FALSE on error.
+         |  @param  array   An additional array with response data.
+         |
+         |  @return die()
+         */
+        private function handleResponse($status, $data = array()){
+            global $L, $url;
+
+            // Translate
+            if(isset($data["success"])){
+                $data["success"] = $L->get($data["success"]);
+            }
+            if(isset($data["error"])){
+                $data["error"] = $L->get($data["error"]);
+            }
+
+            // POST Redirect
+            if($this->backendRequest !== "ajax"){
+                if($status){
+                    Alert::set($data["success"], ALERT_STATUS_OK);
+                } else {
+                    Alert::set($data["error"], ALERT_STATUS_FAIL);
+                }
+                $action = isset($_GET["action"])? $_GET["action"]: $_POST["action"];
+
+                if($data["referer"]){
+                    Redirect::url($data["referer"]);
+                } else {
+                    Redirect::url(HTML_PATH_ADMIN_ROOT . $url->slug() . "#{$action}");
+                }
+                die();
+            }
+
+            // AJAX Print
+            if(!is_array($data)){
+                $data = array();
+            }
+            $data["status"] = ($status)? "success": "error";
+            $data = json_encode($data);
+
+            header("Content-Type: application/json");
+            header("Content-Length: " . strlen($data));
+            print($data);
+            die();
         }
 
         /*
@@ -83,6 +148,7 @@
                 "comment_markup_markdown"   => false,
                 "comment_enable_like"       => true,
                 "comment_enable_dislike"    => true,
+                "frontend_terms"            => "default",
                 "frontend_filter"           => "pageEnd",
                 "frontend_template"         => "default",
                 "frontend_order"            => "date_desc",
@@ -91,7 +157,8 @@
                 "subscription"              => true,
                 "subscription_from"         => "ticker@" . $_SERVER["SERVER_NAME"],
                 "subscription_reply"        => "noreply@" . $_SERVER["SERVER_NAME"],
-                "subscription_page"         => "default",
+                "subscription_optin"        => "default",
+                "subscription_ticker"       => "default",
 
                 "string_success_1"          => "Thanks for your comment!",
                 "string_success_2"          => "Thanks for your comment, please confirm your subscription via the link we sent to your eMail address!",
@@ -115,26 +182,22 @@
             global $comments;
 
             if(file_exists($this->filenameDb)){
-                if(defined("SNICKER")){
-                    return true;
+                if(!defined("SNICKER")){
+                    define("SNICKER", true);
+                    define("SNICKER_PATH", PATH_PLUGINS . basename(__DIR__) . "/");
+                    define("SNICKER_DOMAIN", DOMAIN_PLUGINS . basename(__DIR__) . "/");
+                    define("SNICKER_VERSION", "0.1.0");
+                    define("DB_SNICKER_COMMENTS", PATH_DATABASES . "comments.php");
+
+                    // Load Plugin
+                    require_once("system/comments.class.php");
+                    require_once("system/comment.class.php");
+                    require_once("system/snicker-template.class.php");
+                } else {
+                    $comments = new Comments();
+                    $this->loadThemes();
+                    $this->handle();
                 }
-
-                // Define Basics
-                define("SNICKER", true);
-                define("SNICKER_PATH", PATH_PLUGINS . basename(__DIR__) . "/");
-                define("SNICKER_DOMAIN", DOMAIN_PLUGINS . basename(__DIR__) . "/");
-                define("SNICKER_VERSION", "0.1.0");
-                define("DB_SNICKER_COMMENTS", PATH_DATABASES . "comments.php");
-
-                // Load Plugin
-                require_once("system/comments.class.php");
-                require_once("system/comment.class.php");
-                require_once("system/snicker-template.class.php");
-
-                // Init Plugin
-                $comments = new Comments();
-                $this->loadThemes();
-                $this->handle();
                 return true;
             }
             return false;
@@ -145,25 +208,44 @@
          |  @since  0.1.0
          */
         public function handle(){
-            global $security;
+            global $url, $security;
+
+            // Get Data
+            if(isset($_POST["action"]) && isset($_POST["snicker"])){
+                $data = $_POST;
+                $this->backendRequest = "post";
+            } else if(isset($_GET["action"]) && isset($_GET["snicker"])){
+                $data = $_GET;
+                $this->backendRequest = "get";
+            } else {
+                return null; // No Snicker Stuff here
+            }
 
             // Start Session
             if(!Session::started()){
                 Session::start();
             }
 
-            // Get Data
-            if(isset($_POST["action"]) && isset($_POST["snicker"])){
-                $data = $_POST;
-            } else if(isset($_GET["action"]) && isset($_GET["snicker"])){
-                $data = $_GET;
-            } else {
-                return null;
+            // Check AJAX
+            $ajax = "HTTP_X_REQUESTED_WITH";
+            if(strpos($url->slug(), "snicker/ajax") === 0){
+                if(isset($_SERVER[$ajax]) && $_SERVER[$ajax] === "XMLHttpRequest"){
+                    $this->backendRequest = "ajax";
+                } else {
+                    return Redirect::url(HTML_PATH_ADMIN_ROOT . "snicker/");
+                }
+            } else if(isset($_SERVER[$ajax]) && $_SERVER[$ajax] === "XMLHttpRequest"){
+                print("Invalid AJAX Call"); die();
+            }
+            if($this->backendRequest === "ajax" && !$this->getValue("frontend_template")){
+                print("AJAX Calls has been disabled"); die();
             }
 
             // Validate Call
             if(!isset($data["tokenCSRF"]) || !$security->validateTokenCSRF($data["tokenCSRF"])){
-                return false;
+                return $this->handleResponse(false, array(
+                    "error"     => "snicker-response-001"
+                ));
             }
 
             // Handle Frontend
@@ -171,15 +253,23 @@
                 return $this->handleFrontend($data);
             }
 
+            // AJAX Protection
+            if($this->backendRequest === "ajax"){
+                return $this->handleResponse(false, array("error" => "snicker-response-002"));
+            }
+
             // Handle Backend
             if($data["action"] === "snicker" && $data["snicker"] === "manage"){
                 return $this->handleBackend($data);
             }
 
-            // Handle Backend
+            // Handle Admin
             if($data["action"] === "snicker" && $data["snicker"] === "config"){
                 return $this->handleConfig($data);
             }
+
+            // Unknown Action
+            return $this->handleResponse(false, array("error" => "snicker-response-011"));
         }
 
         /*
@@ -190,8 +280,8 @@
             global $pages, $comments;
 
             // Validate
-            if(!isset($data["comment"]) || !isset($data["type"])){
-                return false;
+            if((!isset($data["comment"]) && !isset($data["uid"])) || !isset($data["type"])){
+                return $this->handleResponse(false, array("error" => "snicker-response-004"));
             }
             $type = $data["type"];
 
@@ -203,7 +293,7 @@
             // Like Comment
             if($type === "like"){
                 if(!$this->getValue("comment_enable_like") || !isset($data["uid"])){
-                    return false;
+                    return $this->handleResponse(false, array("error" => "snicker-response-011"));
                 }
                 return $this->rateComment($data["uid"], "like");
             }
@@ -211,13 +301,10 @@
             // Dislike Comment
             if($type === "dislike"){
                 if(!$this->getValue("comment_enable_dislike") || !isset($data["uid"])){
-                    return false;
+                    return $this->handleResponse(false, array("error" => "snicker-response-011"));
                 }
                 return $this->rateComment($data["uid"], "dislike");
             }
-
-            // Unknown Action
-            return false;
         }
 
         /*
@@ -229,7 +316,7 @@
 
             // Validate
             if(!isset($data["uid"]) || !isset($data["type"])){
-                return false;
+                return $this->handleResponse(false, array("error" => "snicker-response-004"));
             }
 
             // Check Rights
@@ -237,30 +324,21 @@
                 $login = new Login();
             }
             if($login->role() !== "admin"){
-                return false;
+                return $this->handleResponse(false, array("error" => "snicker-response-002"));
             }
 
             // Delete Comment
             if($data["type"] === "delete"){
-                if(!$this->deleteComment($data["uid"])){
-                    return false;
-                }
-                return true;
+                return $this->deleteComment($data["uid"]);
             }
 
             // Edit Comment
             if($data["type"] === "edit"){
-                if(!$this->editComment($data["uid"], $data["comment"])){
-                    return false;
-                }
-                return true;
+                return $this->editComment($data["uid"], $data["comment"]);
             }
 
-            // Change Type
-            if(!$this->changeCommentType($data["uid"], $data["type"])){
-                return false;
-            }
-            return true;
+            // Change Comment Type
+            return $this->changeCommentType($data["uid"], $data["type"]);
         }
 
         /*
@@ -273,8 +351,7 @@
 
             // Validate Call
             if(!$login->isLogged() || $login->role() !== "admin"){
-                // @todo Error
-                return false;
+                return $this->handleResponse(false, array("error" => "snicker-response-002"));
             }
 
             // Loop Configuration
@@ -317,7 +394,7 @@
                 $config["frontend_filter"] = "disabled";
             }
 
-            // Validate eMail
+            // Validate eMails
             if(!Valid::email($config["subscription_from"])){
                 Alert::set("The eMail 'From' Address for the Subscription is invalid!", 1, "error-from");
                 $config["subscription_from"] = $this->dbFields["subscription_from"];
@@ -335,8 +412,7 @@
             // Set and Update
             $this->db = array_merge($this->db, $config);
             $this->save();
-            Alert::set("Settings have been stored successfully!", 0, "success");
-            return Redirect::url(HTML_PATH_ADMIN_ROOT . "snicker#config");
+            return $this->handleResponse(true, array("success" => "snicker-response-003"));
         }
 
 
@@ -427,41 +503,60 @@
          |  @since 0.1.0
          */
         public function writeComment($comment){
-            global $comments, $pages, $users;
+            global $comments, $pages, $url, $users;
+            $referer = DOMAIN . $url->uri();
 
             // Check Basics
             if(!isset($comment["page_key"]) || !$pages->exists($comment["page_key"])){
-                return false;
+                return $this->handleResponse(false, array(
+                    "referer"   => $referer . "#snicker-comments-form",
+                    "error"     => "snicker-response-004"));
             }
-            if(isset($comment["parent_id"])){
-                if(!$comments->exists($comment["parent_id"])){
-                    return false;
+            if(isset($comment["parent_uid"])){
+                if(!$comments->exists($comment["parent_uid"])){
+                    $comment["parent_uid"] = null;
+                } else {
+                    $parent = $comments->getCommentDB($comment["parent_uid"]);
+                    $comment["type"] = "reply";
+                    $comment["depth"] = $parent["depth"]+1;
                 }
             }
 
             // Sanitize Title
             if($this->getValue("comment_title") === "required"){
                 if(!isset($comment["title"]) || empty($comment["title"])){
-                    return false;
+                    return $this->handleResponse(false, array(
+                        "referer"   => $referer . "#snicker-comments-form",
+                        "error"     => $this->getValue("string_error_3")
+                    ));
                 }
             }
             $comment["title"] = isset($comment["title"])? Sanitize::html($comment["title"]): "";
 
             // Sanitize Comment
             if(!isset($comment["comment"]) || empty($comment["comment"])){
-                return false;
+                return $this->handleResponse(false, array(
+                    "referer"   => $referer . "#snicker-comments-form",
+                    "error"     => $this->getValue("string_error_2")
+                ));
             }
             $comment["comment"] = Sanitize::html($comment["comment"]);
 
             // Sanitize User
             if(isset($comment["user"]) && isset($comment["token"])){
                 if(!$users->exists($comment["user"])){
-                    return false;
+                    return $this->handleResponse(false, array(
+                        "referer"   => $referer . "#snicker-comments-form",
+                        "error"     => $this->getValue("string_error_1")
+                    ));
                 }
                 $user = new User($comment["user"]);
 
-                if(md5($user->tokenAuth()) === $comment["token"]){
-                    return false;
+                if(md5($user->tokenAuth()) !== $comment["token"]){
+                    return $this->handleResponse(false, array(
+                        "referer"   => $referer . "#snicker-comments-form",
+                        "error"     => $this->getValue("string_error_1")
+                    ));
                 }
                 unset($comment["user"], $comment["token"]);
 
@@ -471,14 +566,20 @@
                 $comment["email"] = null;
             } else if(isset($comment["username"]) && isset($comment["email"])){
                 if(!Valid::email($comment["email"])){
-                    return false;
+                    return $this->handleResponse(false, array(
+                        "referer"   => $referer . "#snicker-comments-form",
+                        "error"     => $this->getValue("string_error_1")
+                    ));
                 }
                 $comment["uuid"] = null;
                 $comment["status"] = "pending";
                 $comment["username"] = Sanitize::html(strip_tags($comment["username"]));
                 $comment["email"] = Sanitize::email($comment["email"]);
             } else {
-                return false;
+                return $this->handleResponse(false, array(
+                    "referer"   => $referer . "#snicker-comments-form",
+                    "error"     => $this->getValue("string_error_1")
+                ));;
             }
 
             // Sanitize Data
@@ -487,10 +588,17 @@
             $comment["subscribe"] = isset($comment["subscribe"]);
 
             // Check
-            if(!$comments->add($comment)){
-                return false;
+            if(($uid = $comments->add($comment)) === false){
+                return $this->handleResponse(false, array(
+                    "referer"   => $referer . "#snicker-comments-form",
+                    "error"     => $this->getValue("string_error_5")
+                ));
             }
-            return true;
+            return $this->handleResponse(true, array(
+                "referer"   => $referer . "#comment-" . $uid,
+                "success"   => $this->getValue("string_success_" . ((int) $comment["subscribe"] + 1)),
+                "comment"   => $this->renderTheme("comment", array(new Comment($uid), $uid))
+            ));
         }
 
         /*
@@ -502,33 +610,33 @@
 
             // Check Basics
             if(!$comments->exists($uid)){
-                return false;
+                return $this->handleResponse(false, array("error" => "snicker-response-012"));
             }
             $data = new Comment($uid);
 
             // Sanitize Title
             if($this->getValue("comment_title") === "required"){
                 if(!isset($comment["title"]) || empty($comment["title"])){
-                    return false;
+                    return $this->handleResponse(false, array("error" => "snicker-response-017"));
                 }
             }
             $comment["title"] = isset($comment["title"])? Sanitize::html($comment["title"]): "";
 
             // Sanitize Comment
             if(!isset($comment["comment"]) || empty($comment["comment"])){
-                return false;
+                return $this->handleResponse(false, array("error" => "snicker-response-017"));
             }
             $comment["comment"] = Sanitize::html($comment["comment"]);
 
             // Sanitize User
             if(isset($comment["user"]) && isset($comment["token"])){
                 if(!$users->exists($comment["user"])){
-                    return false;
+                    return $this->handleResponse(false, array("error" => "snicker-response-018"));
                 }
                 $user = new User($comment["user"]);
 
-                if(md5($user->tokenAuth()) === $comment["token"]){
-                    return false;
+                if(md5($user->tokenAuth()) !== $comment["token"]){
+                    return $this->handleResponse(false, array("error" => "snicker-response-018"));
                 }
                 unset($comment["user"], $comment["token"]);
 
@@ -538,7 +646,7 @@
                 $comment["email"] = null;
             } else if(isset($comment["username"]) && isset($comment["email"])){
                 if(!Valid::email($comment["email"])){
-                    return false;
+                    return $this->handleResponse(false, array("error" => "snicker-response-018"));
                 }
                 $comment["uuid"] = null;
                 $comment["status"] = "pending";
@@ -548,9 +656,9 @@
 
             // Check
             if(!$comments->edit($uid, $comment)){
-                return false;
+                return $this->handleResponse(false, array("error" => "snicker-response-014"));
             }
-            return true;
+            return $this->handleResponse(true, array("success" => "snicker-response-009"));
         }
 
         /*
@@ -562,10 +670,10 @@
 
             // Check Parameters
             if(!$comments->exists($uid)){
-                return false;
+                return $this->handleResponse(false, array("error" => "snicker-response-012"));
             }
             if(!in_array($type, array("pending", "rejected", "approved", "spam"))){
-                return false;
+                return $this->handleResponse(false, array("error" => "snicker-response-013"));
             }
 
             // Check Rights
@@ -573,20 +681,20 @@
                 $login = new Login();
             }
             if($login->role() !== "admin"){
-                return false;
+                return $this->handleResponse(false, array("error" => "snicker-response-002"));
             }
 
             // Change Comment
             $comment = $comments->getCommentDB($uid);
             if($comment["status"] === $type){
-                return true;
+                return $this->handleResponse(true, array("success" => "snicker-response-016"));
             }
 
             $comment["status"] = $type;
             if(!$comments->edit($uid, $comment)){
-                return false;
+                return $this->handleResponse(false, array("error" => "snicker-response-014"));
             }
-            return true;
+            return $this->handleResponse(true, array("error" => "snicker-response-015"));
         }
 
         /*
@@ -594,11 +702,15 @@
          |  @since 0.1.0
          */
         public function rateComment($uid, $type = "like"){
-            global $login;
+            global $comments, $login, $url;
+            $referer = DOMAIN . $url->uri();
 
             // Check Comment
             if(!$comments->exists($uid)){
-                return false;
+                return $this->handleResponse(false, array(
+                    "referer"   => $referer . "#snicker-comments-form",
+                    "error"     => $this->getValue("string_error_5")
+                ));
             }
             $comment = new Comment($uid);
 
@@ -606,26 +718,44 @@
             if(!Session::started()){
                 Session::start();
             }
+            $rating = $comment->rating();
 
             // Has already rated?
             if(($rate = Session::get("snicker-ratings")) !== false){
-                if(in_array($uid, explode(",", $rate))){
-                    return false;
+                $rate = json_decode($rate, true);
+
+                if(array_key_exists($uid, $rate)){
+                    if($rate[$uid] === $type){
+                        return $this->handleResponse(true, array(
+                            "referer"   => $referer . "#comment-" . $comment->uid(),
+                            "success"   => $this->getValue("string_success_3"),
+                            "rating"    => $comment->rating()
+                        ));
+                    } else {
+                        $rating[($rate[$uid] === "like"? 0: 1)]--;
+                        unset($rate[$uid]);
+                    }
                 }
             }
 
             // Handle
-            $rating = $comment->rating();
-            $reating[($type === "like"? 0: 1)]++;
-            if(!$comments->edit($uid, $rating)){
-                return false;
+            $rating[($type === "like"? 0: 1)]++;
+            if(($uid = $comments->edit($uid, array("rating" => $rating))) === false){
+                return $this->handleResponse(false, array(
+                    "referer"   => $referer . "#comment-" . $comment->uid(),
+                    "error"     => $this->getValue("string_error_5"),
+                    "rating"    => $rating
+                ));
             }
 
             // Update and Return
-            $rate = ($rate === false)? $uid: $rate . "," . $uid;
-            Session::set("snicker-ratings", $rate);
-            return true;
-
+            $rate[$uid] = $type;
+            Session::set("snicker-ratings", json_encode($rate));
+            return $this->handleResponse(true, array(
+                "referer"   => $referer . "#comment-" . $comment->uid(),
+                "success"   => $this->getValue("string_success_3"),
+                "rating"    => $rating
+            ));
         }
 
         /*
@@ -657,7 +787,7 @@
         }
 
         /*
-         |  COMMENTS :: RENDER THEME
+         |  COMMENTS :: RENDER COMMENTS SECTION
          |  @since 0.1.0
          */
         public function renderComments(){
@@ -695,6 +825,7 @@
                 ?></div><?php
             }
         }
+
 
 ##
 ##  BACKEND
@@ -800,6 +931,7 @@
             return $content;
         }
 
+
 ##
 ##  FRONTEND
 ##
@@ -826,16 +958,13 @@
                 //@todo Error
                 return false;
             }
-
-            if($this->getValue("frontend_ajax")){
-                $file = SNICKER_DOMAIN . "/admin/js/ajax.snicker.js";
-                ?>
-                    <script id="snicker-ajax-js" type="text/javascript" src="<?php echo $file; ?>"></script>
-                <?php
-            }
             if(!empty($theme::SNICKER_JS)){
                 $file = SNICKER_DOMAIN . "themes/" . $this->getValue("frontend_template") . "/" . $theme::SNICKER_JS;
                 ?>
+                    <script type="text/javascript">
+                        var SNICKER_AJAX = <?php echo $this->getValue("frontend_ajax")? "true": "false"; ?>;
+                        var SNICKER_PATH = "<?php echo HTML_PATH_ADMIN_ROOT ?>snicker/ajax/";
+                    </script>
                     <script id="snicker-js" type="text/javascript" src="<?php echo $file; ?>"></script>
                 <?php
             }
@@ -853,7 +982,7 @@
          */
         public function siteBodyBegin(){
             if($this->getValue("frontend_filter") !== "siteBodyBegin"){
-                return false;
+                return false; // owo
             }
             print($this->renderComments());
         }
@@ -864,7 +993,7 @@
          */
         public function pageBegin(){
             if($this->getValue("frontend_filter") !== "pageBegin"){
-                return false;
+                return false; // Owo
             }
             print($this->renderComments());
         }
@@ -875,7 +1004,7 @@
          */
         public function pageEnd(){
             if($this->getValue("frontend_filter") !== "pageEnd"){
-                return false;
+                return false; // owO
             }
             print($this->renderComments());
         }
@@ -886,7 +1015,7 @@
          */
         public function siteBodyEnd(){
             if($this->getValue("frontend_filter") !== "siteBodyEnd"){
-                return false;
+                return false; // OwO
             }
             print($this->renderComments());
         }

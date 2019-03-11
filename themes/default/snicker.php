@@ -22,11 +22,16 @@
          |  @since  0.1.0
          */
         public function form($username = "", $email = "", $title = "", $message = ""){
-            global $page, $login, $security;
+            global $comments, $login, $page, $security, $snicker;
 
             $login = new Login();
             if(empty($security->getTokenCSRF())){
                 $security->generateTokenCSRF();
+            }
+
+            $reply = isset($_GET["snicker"]) && $_GET["snicker"] == "reply";
+            if($reply && isset($_GET["uid"]) && $comments->exists($_GET["uid"])){
+                $reply = new Comment($_GET["uid"]);
             }
             ?>
                 <form class="comment-form" method="post" action="<?php echo $page->permalink(); ?>?snicker=comment#snicker">
@@ -43,8 +48,8 @@
                         <?php $user = new User($login->username()); ?>
 
                         <header>
-                            <input type="hidden" name="comment[user]" value="<?php echo $user->username(); ?>" />
-                            <input type="hidden" name="comment[token]" value="<?php echo md5($user->tokenAuth()); ?>" />
+                            <input type="hidden" id="comment-user" name="comment[user]" value="<?php echo $user->username(); ?>" />
+                            <input type="hidden" id="comment-token" name="comment[token]" value="<?php echo md5($user->tokenAuth()); ?>" />
                             <div class="inner">
                                 Logged in as <?php echo $user->nickname(); ?>
                             </div>
@@ -60,19 +65,49 @@
                         <p>
                             <textarea id="comment-text" name="comment[comment]" placeholder="Your Comment..."><?php echo $message; ?></textarea>
                         </p>
+
+                        <?php if(is_a($reply, "Comment")){ ?>
+                            <div class="comment-reply">
+                                <a href="<?php echo $page->permalink(); ?>" class="reply-cancel"></a>
+                                <div class="reply-title">
+                                    <?php echo $reply->username(); ?> wrotes:
+                                </div>
+                                <div class="reply-content">
+                                    <?php echo $reply->comment(); ?>
+                                </div>
+                            </div>
+                        <?php } ?>
                     </article>
 
                     <footer>
                         <div class="aside aside-left">
-                            <input type="checkbox" id="comment-subscribe" name="comment[subscribe]" value="1" /><label for="comment-subscribe">Subscribe via eMail</label>
+                            <input type="checkbox" id="comment-subscribe" name="comment[subscribe]" value="1" />
+                            <label for="comment-subscribe">Subscribe via eMail</label>
                         </div>
                         <div class="aside aside-right">
                             <input type="hidden" name="tokenCSRF" value="<?php echo $security->getTokenCSRF(); ?>" />
                             <input type="hidden" name="comment[page_key]" value="<?php echo $page->key(); ?>" />
                             <input type="hidden" name="action" value="snicker" />
                             <input type="hidden" name="snicker" value="form" />
-                            <button name="type" value="comment">Comment</button>
+                            <?php if(is_a($reply, "Comment")){ ?>
+                                <input type="hidden" name="comment[parent_uid]" value="<?php echo $reply->uid(); ?>" />
+                                <button name="type" value="reply" data-string="Comment">Answer</button>
+                            <?php } else { ?>
+                                <button name="type" value="comment" data-string="Answer">Comment</button>
+                            <?php } ?>
                         </div>
+
+                        <?php if($snicker->getValue("frontend_terms") === "default"){ ?>
+                            <div class="aside aside-full terms-of-use">
+                                <input type="checkbox" id="comment-terms" name="comment[terms]" value="1" />
+                                <label for="comment-terms">I agree that the given data (incl. my hashed, anonymized IP address) gets stored!</label>
+                            </div>
+                        <?php } else if($snicker->getValue("frontend_terms") !== "disabled"){ ?>
+                            <div class="aside aside-full terms-of-use">
+                                <input type="checkbox" id="comment-terms" name="comment[terms]" value="1" />
+                                <label for="comment-terms">I agree the <a href="" target="_blank">Terms of Use</a>!</label>
+                            </div>
+                        <?php } ?>
                     </footer>
                 </form>
             <?php
@@ -83,7 +118,10 @@
          |  @since  0.1.0
          */
         public function comment($comment, $key){
-            global $page, $users, $security, $snicker;
+            global $users, $security, $snicker;
+
+            // Get Page
+            $page = new Page($comment->page_key());
 
             // Check User
             $user = $users->exists($comment->getValue("username"));
@@ -94,7 +132,7 @@
             // Render
             $token = $security->getTokenCSRF();
             $depth = (int) $snicker->getValue("comment_depth");
-            $url = $page->permalink() . "?action=snicker&snicker=form&key=%s&uid=%s&token=%s";
+            $url = $page->permalink() . "?action=snicker&snicker=form&page_key=%s&uid=%s&tokenCSRF=%s";
             $url = sprintf($url, $comment->page_key(), $comment->uid(), $token);
             ?>
                 <div id="comment-<?php echo $comment->uid(); ?>" class="comment">
@@ -115,7 +153,7 @@
                                 <div class="comment-title"><?php echo $comment->title(); ?></div>
                             <?php } ?>
                             <div class="comment-meta">
-                                <span class="meta-author">Written by <?php echo $comment->username(); ?></span>
+                                <span class="meta-author">Written by <span class="author-username"><?php echo $comment->username(); ?></span></span>
                                 <span class="meta-date">on <?php echo $comment->date(); ?></span>
                             </div>
                             <div class="comment-comment">
@@ -124,13 +162,13 @@
                             <div class="comment-action">
                                 <div class="action-left">
                                     <?php if($snicker->getValue("comment_enable_like")){ ?>
-                                        <a href="<?php echo $url; ?>&type=like" class="action-like">
-                                            Like <span><?php echo $comment->like(); ?></span>
+                                        <a href="<?php echo $url; ?>&type=like" class="action-like <?php echo ($this->hasLiked($comment->uid())? "active": ""); ?>">
+                                            Like <span data-snicker="like"><?php echo $comment->like(); ?></span>
                                         </a>
                                     <?php } ?>
                                     <?php if($snicker->getValue("comment_enable_dislike")){ ?>
-                                        <a href="<?php echo $url; ?>&type=dislike" class="action-dislike">
-                                            Dislike <span><?php echo $comment->dislike(); ?></span>
+                                        <a href="<?php echo $url; ?>&type=dislike" class="action-dislike <?php echo ($this->hasDisliked($comment->uid())? "active": ""); ?>">
+                                            Dislike <span data-snicker="dislike"><?php echo $comment->dislike(); ?></span>
                                         </a>
                                     <?php } ?>
                                 </div>
@@ -144,6 +182,40 @@
                     </div>
                 </div>
             <?php
+        }
+
+        /*
+         |  HELPER :: HAS LIKED
+         |  @since  0.1.0
+         */
+        protected function hasLiked($uid){
+            if(($rate = Session::get("snicker-ratings")) === false){
+                return false;
+            }
+
+            // Check Comment UID
+            $rate = json_decode($rate, true);
+            if(!array_key_exists($uid, $rate)){
+                return false;
+            }
+            return $rate[$uid] === "like";
+        }
+
+        /*
+         |  HELPER :: HAS DISLIKED
+         |  @since  0.1.0
+         */
+        protected function hasDisliked($uid){
+            if(($rate = Session::get("snicker-ratings")) === false){
+                return false;
+            }
+
+            // Check Comment UID
+            $rate = json_decode($rate, true);
+            if(!array_key_exists($uid, $rate)){
+                return false;
+            }
+            return $rate[$uid] === "dislike";
         }
 
         /*

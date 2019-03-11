@@ -11,7 +11,7 @@
  */
     if(!defined("BLUDIT")){ die("Go directly to Jail. Do not pass Go. Do not collect 200 Cookies!"); }
 
-    global $comments, $L, $login, $security, $snicker;
+    global $comments, $L, $login, $pages, $security, $snicker;
 
     /*
      |   RENDER COMMENT TABLE
@@ -118,10 +118,17 @@
     }
 
     // Pending Counter
+    $limit = $snicker->getValue("frontend_per_page");
     $count = count($comments->getPendingDB(false));
     if($count > 99){
         $count = "99+";
     }
+
+    // Current Tab
+    $current = isset($_GET["tab"])? $_GET["tab"]: "pending";
+
+    // Static Pages
+    $static = $pages->getStaticDB(false);
 
 ?><h2 class="mt-0 mb-3">
     <span class="oi oi-comment-square" style="font-size: 0.7em;"></span> Snicker Comments
@@ -129,19 +136,19 @@
 
 <ul class="nav nav-pills" role="tablist" data-handle="tabs">
     <li class="nav-item">
-        <a class="nav-link nav-pending active" id="pending-tab" data-toggle="tab" href="#pending" role="tab">
+        <a class="nav-link nav-pending <?php echo($current === "pending")? "active": ""; ?>" id="pending-tab" data-toggle="tab" href="#pending" role="tab">
             Pending
             <?php if(!empty($count)){ ?><span class="badge badge-primary"><?php echo $count; ?></span><?php } ?>
         </a>
     </li>
     <li class="nav-item">
-        <a class="nav-link nav-public" id="public-tab" data-toggle="tab" href="#public" role="tab">Public</a>
+        <a class="nav-link nav-approved <?php echo($current === "approved")? "active": ""; ?>" id="approved-tab" data-toggle="tab" href="#approved" role="tab">Public</a>
     </li>
     <li class="nav-item">
-        <a class="nav-link nav-rejected" id="rejected-tab" data-toggle="tab" href="#rejected" role="tab">Rejected</a>
+        <a class="nav-link nav-rejected <?php echo($current === "rejected")? "active": ""; ?>" id="rejected-tab" data-toggle="tab" href="#rejected" role="tab">Rejected</a>
     </li>
     <li class="nav-item">
-        <a class="nav-link nav-spam" id="spam-tab" data-toggle="tab" href="#spam" role="tab">Spam</a>
+        <a class="nav-link nav-spam <?php echo($current === "spam")? "active": ""; ?>" id="spam-tab" data-toggle="tab" href="#spam" role="tab">Spam</a>
     </li>
     <li class="nav-item flex-grow-1"></li>
     <li class="nav-item float-right">
@@ -151,77 +158,67 @@
     </li>
 </ul>
 <div class="tab-content">
-    <div id="pending" class="tab-pane show active">
-        <div class="card" style="margin: 1.5rem 0;">
-            <div class="card-body">
-                <form>
-                    <div class="form-row align-items-center">
-                        <div class="col-sm-4">
-                            <input type="text" name="" value="" class="form-control" placeholder="Comment Title or Username" />
-                        </div>
-                        <div class="col-sm">
-                            <button class="btn btn-primary" name="action" value="options">Search Comments</button>
-                        </div>
-                    </div>
-                </form>
-            </div>
-        </div>
-        <?php render_snicker_table("pending", $comments->getPendingDB()); ?>
-    </div>
+    <?php
+        foreach(array("pending", "approved", "rejected", "spam") AS $type){
+            $total = $comments->count($type);
+            if(isset($_GET["tab"]) && $_GET["tab"] === $type){
+                $pagenum = isset($_GET["page"])? (int) $_GET["page"]: 1;
+                if($pagenum < 0){
+                    $pagenum = 1;
+                }
+            } else {
+                $pagenum = 1;
+            }
 
-    <div id="public" class="tab-pane show">
-        <div class="card" style="margin: 1.5rem 0;">
-            <div class="card-body">
-                <form>
-                    <div class="form-row align-items-center">
-                        <div class="col-sm-4">
-                            <input type="text" name="" value="" class="form-control" placeholder="Comment Title or Username" />
-                        </div>
-                        <div class="col-sm">
-                            <button class="btn btn-primary" name="action" value="options">Search Comments</button>
-                        </div>
-                    </div>
-                </form>
-            </div>
-        </div>
-        <?php render_snicker_table("approved", $comments->getPublicDB()); ?>
-    </div>
+            // Render Tab Content
+            $link = DOMAIN_ADMIN . "snicker?page=%d&tab={$type}#$type";
+            ?>
+                <div id="<?php echo $type; ?>" class="tab-pane show <?php echo($current === $type)? "active": ""; ?>">
+                    <div class="card" style="margin: 1.5rem 0;">
+                        <div class="card-body">
+                            <div class="row">
+                                <form class="col-sm-6">
+                                    <div class="form-row align-items-center">
+                                        <div class="col-sm-8">
+                                            <input type="text" name="" value="" class="form-control" placeholder="Comment Title or Username" />
+                                        </div>
+                                        <div class="col-sm-4">
+                                            <button class="btn btn-primary" name="action" value="options">Search Comments</button>
+                                        </div>
+                                    </div>
+                                </form>
+                                <div class="col-sm-6 text-right">
+                                    <?php if($total > $limit){ ?>
+                                        <div class="btn-group btn-group-pagination">
+                                            <?php if($pagenum <= 1){ ?>
+                                                <span class="btn btn-secondary disabled">&laquo;</span>
+                                                <span class="btn btn-secondary disabled">&lsaquo;</span>
+                                            <?php } else { ?>
+                                                <a href="<?php printf($link, 1); ?>" class="btn btn-secondary">&laquo;</a>
+                                                <a href="<?php printf($link, $pagenum-1); ?>" class="btn btn-secondary">&lsaquo;</a>
+                                            <?php } ?>
+                                            <?php if(($pagenum * $limit) < $total){ ?>
+                                                <a href="<?php printf($link, $pagenum+1); ?>" class="btn btn-secondary">&rsaquo;</a>
+                                                <a href="<?php printf($link, ceil($total / $limit)); ?>" class="btn btn-secondary">&raquo;</a>
+                                            <?php } else { ?>
+                                                <span class="btn btn-secondary disabled">&rsaquo;</span>
+                                                <span class="btn btn-secondary disabled">&raquo;</span>
+                                            <?php } ?>
 
-    <div id="rejected" class="tab-pane show">
-        <div class="card" style="margin: 1.5rem 0;">
-            <div class="card-body">
-                <form>
-                    <div class="form-row align-items-center">
-                        <div class="col-sm-4">
-                            <input type="text" name="" value="" class="form-control" placeholder="Comment Title or Username" />
-                        </div>
-                        <div class="col-sm">
-                            <button class="btn btn-primary" name="action" value="options">Search Comments</button>
-                        </div>
-                    </div>
-                </form>
-            </div>
-        </div>
-        <?php render_snicker_table("rejected", $comments->getRejectedDB()); ?>
-    </div>
 
-    <div id="spam" class="tab-pane show">
-        <div class="card" style="margin: 1.5rem 0;">
-            <div class="card-body">
-                <form>
-                    <div class="form-row align-items-center">
-                        <div class="col-sm-4">
-                            <input type="text" name="" value="" class="form-control" placeholder="Comment Title or Username" />
-                        </div>
-                        <div class="col-sm">
-                            <button class="btn btn-primary" name="action" value="options">Search Comments</button>
+                                        </div>
+                                    <?php } ?>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </form>
-            </div>
-        </div>
-        <?php render_snicker_table("spam", $comments->getSpamDB()); ?>
-    </div>
+
+                    <?php render_snicker_table($type, $comments->getList($pagenum, $limit, $type)); ?>
+                </div>
+            <?php
+
+        }
+    ?>
 
     <div id="config" class="tab-pane show">
         <form method="post" action="<?php echo HTML_PATH_ADMIN_ROOT; ?>snicker#config">
@@ -362,13 +359,28 @@
             </div>
 
             <div class="form-group row">
+                <label for="sn-terms" class="col-sm-3 col-form-label">Terms of Use Checkbox</label>
+                <div class="col-sm-9">
+                    <select id="sn-terms" name="frontend_terms" class="form-control custom-select">
+                        <option value="disabled" <?php $snicker->selected("frontend_terms", "disabled"); ?>>Disable this field</option>
+                        <option value="default" <?php $snicker->selected("frontend_terms", "default"); ?>>Show default Message</option>
+
+                        <?php foreach($static AS $key => $value){ ?>
+                            <option value="<?php echo $key; ?>" <?php $snicker->selected("subscription_ticker", $key); ?>>Page: <?php echo $value["title"]; ?></option>
+                        <?php } ?>
+                    </select>
+                    <small class="form-text text-muted">Show the default GDPR Text or Select your own static 'Terms of Use' page!</small>
+                </div>
+            </div>
+
+            <div class="form-group row">
                 <label for="sn-ajax" class="col-sm-3 col-form-label">AJAX Script</label>
                 <div class="col-sm-9">
                     <select id="sn-ajax" name="frontend_ajax" class="form-control custom-select">
                         <option value="true" <?php $snicker->selected("frontend_ajax", true); ?>>Embed AJAX Script</option>
                         <option value="false" <?php $snicker->selected("frontend_ajax", false); ?>>Don't use AJAX</option>
                     </select>
-                <small class="form-text text-muted">The AJAX Script hands over the request (comment, like, dislike) directly without reloading the page!</small>
+                    <small class="form-text text-muted">The AJAX Script hands over the request (comment, like, dislike) directly without reloading the page!</small>
                 </div>
             </div>
 
@@ -400,10 +412,25 @@
             </div>
 
             <div class="form-group row">
-                <label for="sn-subscription-body" class="col-sm-3 col-form-label">eMail Body (Page)</label>
+                <label for="sn-subscription-optin" class="col-sm-3 col-form-label">eMail Body (Opt-In)</label>
                 <div class="col-sm-9">
-                    <select id="sn-subscription-body" class="form-control custom-select">
-                        <option>Use default Notification eMail</option>
+                    <select id="sn-subscription-optin" name="subscription_optin" class="form-control custom-select">
+                        <option value="default" <?php $snicker->selected("subscription_optin", "default"); ?>>Use default Subscription eMail</option>
+                        <?php foreach($static AS $key => $value){ ?>
+                            <option value="<?php echo $key; ?>" <?php $snicker->selected("subscription_optin", $key); ?>>Page: <?php echo $value["title"]; ?></option>
+                        <?php } ?>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group row">
+                <label for="sn-subscription-ticker" class="col-sm-3 col-form-label">eMail Body (Notification)</label>
+                <div class="col-sm-9">
+                    <select id="sn-subscription-ticker" name="subscription_ticker" class="form-control custom-select">
+                        <option value="default" <?php $snicker->selected("subscription_ticker", "default"); ?>>Use default Notification eMail</option>
+                        <?php foreach($static AS $key => $value){ ?>
+                            <option value="<?php echo $key; ?>" <?php $snicker->selected("subscription_ticker", $key); ?>>Page: <?php echo $value["title"]; ?></option>
+                        <?php } ?>
                     </select>
                     <small class="form-text text-muted">Read more about a custom Notification eMails <a href="#" target="_blank">here</a>!</small>
                 </div>
