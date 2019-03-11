@@ -26,9 +26,7 @@
                 <div class="row justify-content-md-center">
                     <div class="col-sm-6">
                         <div class="card w-100 bg-light">
-                            <div class="card-body text-center p-5">
-                                <i>No Comments available!</i>
-                            </div>
+                            <div class="card-body text-center p-5"><i>No Comments available!</i></div>
                         </div>
                     </div>
                 </div>

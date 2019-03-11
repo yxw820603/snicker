@@ -15,6 +15,8 @@
         /*
          |  CONSTRUCTOR
          |  @since  0.1.0
+         |
+         |  @param  multi   The unique comment id or FALSE.
          */
         public function __construct($uid){
             global $comments;
@@ -43,6 +45,11 @@
         /*
          |  PUBLIC :: GET VALUE
          |  @since  0.1.0
+         |
+         |  @param  string  The unique field key.
+         |  @param  multi   The default value, which should return if the field key doesnt exist.
+         |
+         |  @multi  multi   The respective field value on success, $default otherwise.
          */
         public function getValue($field, $default = false){
             if(isset($this->vars[$field])){
@@ -54,6 +61,11 @@
         /*
          |  PUBLIC :: SET FIELD
          |  @since  0.1.0
+         |
+         |  @param  string  The unique field key.
+         |  @param  multi   The respective field value, which you want to set.
+         |
+         |  @return bool    TRUE
          */
         public function setField($field, $value = NULL){
             if(is_array($field)){
@@ -70,6 +82,10 @@
         /*
          |  FIELD :: COMMENT RAW
          |  @since  0.1.0
+         |
+         |  @param  bool    TRUE to sanitize the raw comment content, FALSE otherwise.
+         |
+         |  @return string  The (sanitized) raw content on success, FALSE on failure.
          */
         public function commentRaw($sanitize = false){
             if(isset($this->commentRaw)){
@@ -90,6 +106,10 @@
         /*
          |  FIELD :: COMMENT
          |  @since  0.1.0
+         |
+         |  @param  bool    TRUE to sanitize the raw comment content, FALSE otherwise.
+         |
+         |  @return string  The (sanitized) content on success, FALSE on failure.
          */
         public function comment($sanitize = false){
             global $snicker;

@@ -33,7 +33,7 @@
          |  HELPER :: SELECTED
          |  @since  0.1.0
          |
-         |  @param  string  The respective option key.
+         |  @param  string  The respective option key (used in `getValue()`).
          |  @param  multi   The value to compare with.
          |  @param  bool    TRUE to print `selected="selected"`, FALSE to return the string.
          |                  Use `null` to return as boolean!
@@ -59,7 +59,7 @@
          |  HELPER :: CHECKED
          |  @since  0.1.0
          |
-         |  @param  string  The respective option key.
+         |  @param  string  The respective option key (used in `getValue()`).
          |  @param  multi   The value to compare with.
          |  @param  bool    TRUE to print `checked="checked"`, FALSE to return the string.
          |                  Use `null` to return as boolean!
@@ -88,7 +88,7 @@
          |  @param  bool    TRUE on success, FALSE on error.
          |  @param  array   An additional array with response data.
          |
-         |  @return die()
+         |  @return die()   die()s in any case.
          */
         private function handleResponse($status, $data = array()){
             global $L, $url;
@@ -160,6 +160,7 @@
                 "subscription_optin"        => "default",
                 "subscription_ticker"       => "default",
 
+                // Frontend Messages, can be adapted by the user
                 "string_success_1"          => "Thanks for your comment!",
                 "string_success_2"          => "Thanks for your comment, please confirm your subscription via the link we sent to your eMail address!",
                 "string_success_3"          => "Thanks for voting this comment!",
@@ -811,27 +812,29 @@
          |  @since 0.1.0
          */
         public function renderComments(){
-            global $page, $comments;
+            global $comments, $login, $page;
 
             // Get Temp
             if(!Session::started()){
                 Session::start();
             }
             $data = Session::get("snicker-comment");
-            $limit = $this->getValue("frontend_per_page");
-            $count = $comments->count("approved", $page->key());
 
-            // Fetch Data
+            // Prepare Data
+            $user = $mail = $title = $comment = "";
             if(is_array($data)){
                 $user = isset($data["username"])? $data["username"]: "";
                 $mail = isset($data["email"])? $data["email"]: "";
                 $title = isset($data["title"])? $data["title"]: "";
                 $comment = isset($data["comment"])? $data["comment"]: "";
-            } else {
-                $user = $mail = $title = $comment = "";
             }
-            if($this->getValue("comment_title") === "disabled"){
-                $title = false;
+            $title = ($this->getValue("comment_title") === "disabled")? false: $title;
+
+            // Prepare User Data
+            $login = is_a($login, "Login")? $login: new Login();
+            if($login->isLogged()){
+                $user = new User($login->username());
+                $user = array($user->username(), md5($user->tokenAuth()), $user->nickname());
             }
 
             // Render Form
@@ -847,7 +850,9 @@
             }
             ?></div><?php
 
-            // Render Comment List
+            // Prepare Comment List
+            $limit = $this->getValue("frontend_per_page");
+            $count = $comments->count("approved", $page->key());
             $max = ceil($count / $limit);
             if(isset($_GET["cpage"]) && $_GET["cpage"] > 1){
                 $num = ($_GET["cpage"] < $max)? $_GET["cpage"]: $max;
@@ -856,6 +861,7 @@
             }
             $list = $comments->getList($num, $limit, "approved", $page->key());
 
+            // Render Comment List
             ?><div id="snicker-comments-list" class="snicker-comments-list"><?php
             if(count($list) < 1){
                 if($page->allowComments()){

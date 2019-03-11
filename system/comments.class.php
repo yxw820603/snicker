@@ -50,6 +50,10 @@
         /*
          |  HELPER :: FILL LOG FILE
          |  @since  0.1.0
+         |
+         |  @param  string  The respective method for the log (Use __METHOD__)
+         |  @param  string  The respective error message to be logged.
+         |  @param  array   Additional values AS array for the `vsprintf` function.
          */
         private function log($method, $string, $args){
             $strings = array(
@@ -94,6 +98,8 @@
         /*
          |  PUBLIC :: GET DEFAULT FIELDS
          |  @since  0.1.0
+         |
+         |  @return array   An array with all default fields and values per entry.
          */
         public function getDefaultFields(){
             return $this->dbFields;
@@ -103,6 +109,10 @@
         /*
          |  DATA :: GET DATABASE
          |  @since  0.1.0
+         |
+         |  @param  bool    TRUE to just return the keys, FALSE to return the complete DB.
+         |
+         |  @return array   The complete database entries (or keys) within an ARRAY.
          */
         public function getDB($keys = true){
             if($keys){
@@ -114,6 +124,10 @@
         /*
          |  DATA :: GET PENDING DATABASE
          |  @since  0.1.0
+         |
+         |  @param  bool    TRUE to just return the keys, FALSE to return the complete DB.
+         |
+         |  @return array   The respective database entries (or keys) within an ARRAY.
          */
         public function getPendingDB($keys = true){
             $temp = $this->db;
@@ -131,6 +145,10 @@
         /*
          |  DATA :: GET PUBLIC DATABASE
          |  @since  0.1.0
+         |
+         |  @param  bool    TRUE to just return the keys, FALSE to return the complete DB.
+         |
+         |  @return array   The respective database entries (or keys) within an ARRAY.
          */
         public function getPublicDB($keys = true){
             $temp = $this->db;
@@ -148,6 +166,10 @@
         /*
          |  DATA :: GET REJECTED DATABASE
          |  @since  0.1.0
+         |
+         |  @param  bool    TRUE to just return the keys, FALSE to return the complete DB.
+         |
+         |  @return array   The respective database entries (or keys) within an ARRAY.
          */
         public function getRejectedDB($keys = true){
             $temp = $this->db;
@@ -165,6 +187,10 @@
         /*
          |  DATA :: GET SPAM DATABASE
          |  @since  0.1.0
+         |
+         |  @param  bool    TRUE to just return the keys, FALSE to return the complete DB.
+         |
+         |  @return array   The respective database entries (or keys) within an ARRAY.
          */
         public function getSpamDB($keys = true){
             $temp = $this->db;
@@ -182,6 +208,11 @@
         /*
          |  DATA :: GET COMMENTS BY PAGE
          |  @since  0.1.0
+         |
+         |  @param  string  The content page slug / key.
+         |  @param  bool    TRUE to just return the keys, FALSE to return the complete DB.
+         |
+         |  @return array   The respective database entries (or keys) within an ARRAY.
          */
         public function getPageCommentsDB($page_key, $keys = true){
             $temp = $this->db;
@@ -202,6 +233,10 @@
         /*
          |  DATA :: GET COMMENT ITEM
          |  @since  0.1.0
+         |
+         |  @param  string  The unique comment ID.
+         |
+         |  @return array   The comment data array on success, FALSE on failure.
          */
         public function getCommentDB($uid){
             if($this->exists($uid)){
@@ -213,6 +248,10 @@
         /*
          |  DATA :: CHECK IF COMMENT ITEM EXISTS
          |  @since  0.1.0
+         |
+         |  @param  string  The unique comment ID.
+         |
+         |  @return bool    TRUE if the comment ID exists, FALSE if not.
          */
         public function exists($uid){
             return isset($this->db[$uid]);
@@ -221,6 +260,15 @@
         /*
          |  DATA :: LIST COMMENTS
          |  @since  0.1.0
+         |
+         |  @param  int     The current comment page.<, startin with 1.
+         |  @param  int     The number of comments to be shown per page.
+         |  @param  multi   The desired comment status as STRING, multiple as ARRAY.
+         |                  Pass `null` to get each comment status.
+         |  @param  multi   The desired content page as STRING, multiple as ARRAY.
+         |                  Pass `null` to get each comment of each content page.
+         |
+         |  @return array   The respective database keys with an ARRAY or FALSE on failure.
          */
         public function getList($page, $limit, $status = "approved", $page_key = null){
             $status = is_string($status)? array($status): $status;
@@ -261,6 +309,13 @@
         /*
          |  DATA :: COUNT COMMENTS
          |  @since  0.1.0
+         |
+         |  @param  multi   The desired comment status as STRING, multiple as ARRAY.
+         |                  Pass `null` to get each comment status.
+         |  @param  multi   The desired content page as STRING, multiple as ARRAY.
+         |                  Pass `null` to get each comment of each content page.
+         |
+         |  @return int     The total number of comments.
          */
         public function count($status = "approved", $page_key = null){
             $status = is_string($status)? array($status): $status;
@@ -366,7 +421,7 @@
          |  @since  0.1.0
          |
          |  @param  string  The unique comment ID as STRING.
-         |  @param  array   The respective comment array.
+         |  @param  array   The respective comment data, whcih you want to update.
          |
          |  @return multi   The comment UID on success, FALSE on failure.
          */
@@ -481,8 +536,10 @@
         }
 
         /*
-         |  HANDLE :: SORT COMMENTS
+         |  INTERNAL :: SORT COMMENTS
          |  @since  0.1.0
+         |
+         |  @return bool    TRUE
          */
         public function sortBy(){
             global $snicker;

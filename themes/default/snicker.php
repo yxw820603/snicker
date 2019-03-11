@@ -22,9 +22,9 @@
          |  @since  0.1.0
          */
         public function form($username = "", $email = "", $title = "", $message = ""){
-            global $comments, $login, $page, $security, $snicker;
+            global $comments, $page, $security, $snicker;
 
-            $login = new Login();
+
             if(empty($security->getTokenCSRF())){
                 $security->generateTokenCSRF();
             }
@@ -35,23 +35,21 @@
             }
             ?>
                 <form class="comment-form" method="post" action="<?php echo $page->permalink(); ?>?snicker=comment#snicker">
-                    <?php if(!$login->isLogged()){ ?>
+                    <?php if(is_array($username)){ ?>
+                        <header>
+                            <input type="hidden" id="comment-user" name="comment[user]" value="<?php echo $username[0]; ?>" />
+                            <input type="hidden" id="comment-token" name="comment[token]" value="<?php echo $username[1]; ?>" />
+                            <div class="inner">
+                                Logged in as <b><?php echo $username[2]; ?></b> (<?php echo $username[0]; ?>)
+                            </div>
+                        </header>
+                    <?php } else { ?>
                         <header>
                             <div class="aside aside-left">
                                 <input type="text" id="comment-user" name="comment[username]" value="<?php echo $username; ?>" placeholder="Your Username" />
                             </div>
                             <div class="aside aside-right">
                                 <input type="email" id="comment-mail" name="comment[email]" value="<?php echo $email; ?>" placeholder="Your eMail Address" />
-                            </div>
-                        </header>
-                    <?php } else { ?>
-                        <?php $user = new User($login->username()); ?>
-
-                        <header>
-                            <input type="hidden" id="comment-user" name="comment[user]" value="<?php echo $user->username(); ?>" />
-                            <input type="hidden" id="comment-token" name="comment[token]" value="<?php echo md5($user->tokenAuth()); ?>" />
-                            <div class="inner">
-                                Logged in as <?php echo $user->nickname(); ?>
                             </div>
                         </header>
                     <?php } ?>

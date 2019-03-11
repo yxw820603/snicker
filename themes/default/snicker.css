@@ -1,3 +1,15 @@
+/*
+ |  Snicker     A small Comment System 4 Bludit
+ |  @file       ./system/themes/default/snicker.css
+ |  @author     SamBrishes <sam@pytes.net>
+ |  @version    0.1.0
+ |
+ |  @website    https://github.com/pytesNET/snicker
+ |  @license    X11 / MIT License
+ |  @copyright  Copyright © 2018 - 2019 SamBrishes, pytesNET <info@pytes.net>
+ */
+
+/* @start ANIMATIONs */
 @keyframes spin{
     0% {
         transform: rotate(0deg);
@@ -14,7 +26,41 @@
         -webkit-transform: rotate(-359deg);
     }
 }
+@-moz-keyframes spin{
+    0% {
+        transform: rotate(0deg);
+        -o-transform: rotate(0deg);
+        -ms-transform: rotate(0deg);
+        -moz-transform: rotate(0deg);
+        -webkit-transform: rotate(0deg);
+    }
+    0% {
+        transform: rotate(-359deg);
+        -o-transform: rotate(-359deg);
+        -ms-transform: rotate(-359deg);
+        -moz-transform: rotate(-359deg);
+        -webkit-transform: rotate(-359deg);
+    }
+}
+@-webkit-keyframes spin{
+    0% {
+        transform: rotate(0deg);
+        -o-transform: rotate(0deg);
+        -ms-transform: rotate(0deg);
+        -moz-transform: rotate(0deg);
+        -webkit-transform: rotate(0deg);
+    }
+    0% {
+        transform: rotate(-359deg);
+        -o-transform: rotate(-359deg);
+        -ms-transform: rotate(-359deg);
+        -moz-transform: rotate(-359deg);
+        -webkit-transform: rotate(-359deg);
+    }
+}
+/* @end ANIMATIONs */
 
+/* @start MAIN ELEMENT */
 .snicker-comments{
     width: 100%;
     margin: 45px 0 30px 0;
@@ -33,6 +79,10 @@
     font-style: italic;
     line-height: 50px;
 }
+/* @end MAIN ELEMENT */
+
+
+/* @start COMMENT FORM */
 .snicker-comments form.comment-form{
     width: 100%;
     margin: 0;
@@ -295,7 +345,9 @@
     font-weight: bold;
     font-weight: 600;
 }
+/* @end COMMENT FORM */
 
+/* @start COMMENT LIST */
 .snicker-comments-list{
     width: 100%;
     display: block;
@@ -476,6 +528,8 @@
     color: #dc3545;
     background-color: #ffffff;
 }
+
+/* Pagination */
 .snicker-comments-list .pagination{
     width: 100%;
     margin: 10px 0;
@@ -563,3 +617,4 @@
     -webkit-border-top-right-radius: 3px;
     -webkit-border-bottom-right-radius: 3px;
 }
+/* @end COMMENT LIST */

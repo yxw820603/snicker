@@ -1,6 +1,6 @@
 /*
  |  Snicker     A small Comment System 4 Bludit
- |  @file       ./admin/js/ajax.snicker.js
+ |  @file       ./system/themes/default/snicker.js
  |  @author     SamBrishes <sam@pytes.net>
  |  @version    0.1.0
  |
