@@ -177,11 +177,11 @@
                                 $stop = $maxpages;
                             } else {
                                 $start = ($cpage > 3)? $cpage - 3: $cpage;
-                                $stop = ($cpage + 3 > $maxpages)? $cpage + 3: $maxpages;
+                                $stop = ($cpage + 3 < $maxpages)? $cpage + 3: $maxpages;
                             }
 
                             if($start > 1){
-                                ?><span class="pagination-separator">...</span><?php
+                                ?><span class="pagination-button button-sep disabled">...</span><?php
                             }
                             for($i = $start; $i <= $stop; $i++){
                                 $active = ($i == $cpage)? "active": "";
@@ -190,7 +190,7 @@
                                 <?php
                             }
                             if($stop < $maxpages){
-                                ?><span class="pagination-separator">...</span><?php
+                                ?><span class="pagination-button button-sep disabled">...</span><?php
                             }
                         ?>
 
