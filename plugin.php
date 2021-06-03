@@ -1064,16 +1064,13 @@
          |  @since  0.1.0
          */
         public function pageEnd(){
-           
-
             if($this->getValue("frontend_filter") !== "pageEnd"){
                 return false; // owO
             }
-
             global $page;
 
-            if(strpos($_SERVER["REQUEST_URI"],$page->key()) !== false){
-                print($this->renderComments());
+            if(strpos(urldecode($_SERVER["REQUEST_URI"]),$page->key()) !== false){
+		print($this->renderComments());
                 return true;
             }
             else{
