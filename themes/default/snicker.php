@@ -53,7 +53,7 @@
                             </div>
                         </header>
                     <?php } ?>
-
+                    
                     <article>
                         <?php if(Alert::get("snicker-alert") !== false){ ?>
                             <div class="comment-alert alert-error">
@@ -73,6 +73,7 @@
                         <p>
                             <textarea id="comment-text" name="comment[comment]" placeholder="Your Comment..."><?php echo $message; ?></textarea>
                         </p>
+                        <button name="type" value="comment" data-string="Answer">Comment</button>
 
                         <?php if(is_a($reply, "Comment")){ ?>
                             <div class="comment-reply">
@@ -87,11 +88,11 @@
                         <?php } ?>
                     </article>
 
-                    <footer>
-                        <div class="aside aside-left">
+                    <footer style="display:none">
+                        <!-- <div class="aside aside-left">
                             <input type="checkbox" id="comment-subscribe" name="comment[subscribe]" value="1" />
                             <label for="comment-subscribe">Subscribe via eMail</label>
-                        </div>
+                        </div> -->
                         <div class="aside aside-right">
                             <input type="hidden" name="tokenCSRF" value="<?php echo $security->getTokenCSRF(); ?>" />
                             <input type="hidden" name="comment[page_key]" value="<?php echo $page->key(); ?>" />
@@ -101,7 +102,7 @@
                                 <input type="hidden" name="comment[parent_uid]" value="<?php echo $reply->uid(); ?>" />
                                 <button name="type" value="reply" data-string="Comment">Answer</button>
                             <?php } else { ?>
-                                <button name="type" value="comment" data-string="Answer">Comment</button>
+                                
                             <?php } ?>
                         </div>
 
@@ -265,9 +266,9 @@
                                     <?php } ?>
                                 </div>
                                 <div class="action-right">
-                                    <?php if($depth === 0 || $depth > $comment->depth()){ ?>
+                                    <!-- <?php if($depth === 0 || $depth > $comment->depth()){ ?>
                                         <a href="<?php echo $page->permalink(); ?>?snicker=reply&uid=<?php echo $comment->key(); ?>#snicker-comments-form" class="action-reply">Reply</a>
-                                    <?php } ?>
+                                    <?php } ?> -->
                                 </div>
                             </div>
                         </div>
