@@ -1,0 +1,33 @@
+
+.nav.nav-pills .nav-link.nav-approved.active{
+    background-color: #28A745;
+}
+.nav.nav-pills .nav-link.nav-pending .badge{
+    margin-top: 2px;
+    vertical-align: top;
+}
+.nav.nav-pills .nav-link.nav-pending.active{
+    background-color: #007bff;
+}
+.nav.nav-pills .nav-link.nav-pending.active .badge{
+    color: #007bff;
+    background-color: #fff;
+}
+.nav.nav-pills .nav-link.nav-rejected.active{
+    background-color: #FFC107;
+}
+.nav.nav-pills .nav-link.nav-spam.active{
+    background-color: #DC3545;
+}
+
+.btn-group.btn-group-pagination .btn{
+    width: 34px;
+    padding-top: 5px;
+    padding-bottom: 7px;
+    font-size: 20px;
+    line-height: 20px;
+    text-align: center;
+}
+.btn-group.btn-group-pagination .btn.disabled{
+    cursor: not-allowed;
+}
